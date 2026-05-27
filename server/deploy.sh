@@ -1,34 +1,58 @@
 #!/bin/bash
-# E-Paper Display Server — Debian deploy script
-# Run as root: sudo bash deploy.sh
+# E-Paper Display Server — deploy & update script
+# First install : sudo bash deploy.sh
+# After git pull: sudo bash deploy.sh   (auto-detects update mode)
 set -e
 
 APP_DIR="/opt/epaper-server"
 SERVICE="epaper-server"
-PORT=5000
 NGINX_SITE="epaper"
-
-echo "=== E-Paper Display Server Deployment ==="
-
-# Install system packages
-apt-get update -qq
-apt-get install -y python3 python3-pip python3-venv nginx
-
-# Copy app files to /opt
 SRC="$(cd "$(dirname "$0")" && pwd)"
-mkdir -p "$APP_DIR"
-cp "$SRC/app.py" "$APP_DIR/"
-cp "$SRC/requirements.txt" "$APP_DIR/"
-cp -r "$SRC/static" "$APP_DIR/"
-mkdir -p "$APP_DIR/data"
-chown -R www-data:www-data "$APP_DIR/data"
 
-# Python virtualenv + dependencies
-python3 -m venv "$APP_DIR/venv"
-"$APP_DIR/venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
+# ── Detect mode ────────────────────────────────────────────────────
+if [ -d "$APP_DIR/venv" ]; then
+    MODE="update"
+else
+    MODE="install"
+fi
 
-# Systemd service
-cat > "/etc/systemd/system/$SERVICE.service" <<EOF
+echo "=== E-Paper Display Server — ${MODE} ==="
+
+# ── Sync app files (both modes) ────────────────────────────────────
+sync_files() {
+    cp "$SRC/app.py"          "$APP_DIR/"
+    cp "$SRC/requirements.txt" "$APP_DIR/"
+    rm -rf "$APP_DIR/static"
+    cp -r  "$SRC/static"      "$APP_DIR/"
+    echo "[files] app.py, requirements.txt, static/ synced"
+}
+
+# ── Install Python dependencies (both modes) ───────────────────────
+install_deps() {
+    "$APP_DIR/venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
+    echo "[pip] dependencies up to date"
+}
+
+# ══════════════════════════════════════════════════════════════════════
+if [ "$MODE" = "install" ]; then
+# ══════════════════════════════════════════════════════════════════════
+
+    # System packages
+    apt-get update -qq
+    apt-get install -y python3 python3-pip python3-venv nginx
+
+    # App directory
+    mkdir -p "$APP_DIR"
+    sync_files
+    mkdir -p "$APP_DIR/data"
+    chown -R www-data:www-data "$APP_DIR/data"
+
+    # Virtual environment
+    python3 -m venv "$APP_DIR/venv"
+    install_deps
+
+    # Systemd service
+    cat > "/etc/systemd/system/$SERVICE.service" <<EOF
 [Unit]
 Description=E-Paper Display Server
 After=network.target
@@ -45,20 +69,16 @@ Environment=PYTHONUNBUFFERED=1
 [Install]
 WantedBy=multi-user.target
 EOF
+    systemctl daemon-reload
+    systemctl enable "$SERVICE"
+    echo "[systemd] service installed and enabled"
 
-systemctl daemon-reload
-systemctl enable "$SERVICE"
-systemctl restart "$SERVICE"
-echo "Service started: $SERVICE"
-
-# Nginx reverse proxy
-cat > "/etc/nginx/sites-available/$NGINX_SITE" <<'EOF'
+    # Nginx
+    cat > "/etc/nginx/sites-available/$NGINX_SITE" <<'NGINX'
 server {
     listen 80;
     server_name _;
-
     client_max_body_size 20M;
-
     location / {
         proxy_pass         http://127.0.0.1:5000;
         proxy_set_header   Host $host;
@@ -66,18 +86,33 @@ server {
         proxy_read_timeout 60s;
     }
 }
-EOF
+NGINX
+    ln -sf "/etc/nginx/sites-available/$NGINX_SITE" "/etc/nginx/sites-enabled/$NGINX_SITE"
+    rm -f /etc/nginx/sites-enabled/default
+    nginx -t && systemctl reload nginx
+    echo "[nginx] configured"
 
-ln -sf "/etc/nginx/sites-available/$NGINX_SITE" "/etc/nginx/sites-enabled/$NGINX_SITE"
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
-echo "Nginx configured"
+# ══════════════════════════════════════════════════════════════════════
+else  # update
+# ══════════════════════════════════════════════════════════════════════
+
+    sync_files
+    install_deps
+
+fi
+# ══════════════════════════════════════════════════════════════════════
+
+# Restart service (both modes)
+systemctl restart "$SERVICE"
+echo "[systemd] $SERVICE restarted"
 
 echo ""
-echo "=== Deployment complete ==="
-IP=$(hostname -I | awk '{print $1}')
-echo "Web GUI:  http://$IP/"
-echo "API:      http://$IP/api/status"
-echo ""
-echo "Optional: add HTTPS with  certbot --nginx -d yourdomain.com"
-echo "Service logs:  journalctl -u $SERVICE -f"
+echo "=== ${MODE} complete ==="
+if [ "$MODE" = "install" ]; then
+    IP=$(hostname -I | awk '{print $1}')
+    echo "Web GUI:  http://$IP/"
+    echo "API:      http://$IP/api/status"
+    echo ""
+    echo "Tip: add HTTPS with  certbot --nginx -d yourdomain.com"
+fi
+echo "Logs: journalctl -u $SERVICE -f"
