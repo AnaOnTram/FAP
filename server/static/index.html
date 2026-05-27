@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>E-Paper Display</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #111;
+  --surface: #1e1e1e;
+  --border: #333;
+  --text: #eee;
+  --muted: #888;
+  --accent: #4a9eff;
+  --danger: #e05252;
+  --success: #52a852;
+  --radius: 10px;
+}
+body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 15px; min-height: 100vh; padding-bottom: 24px; }
+.container { max-width: 640px; margin: 0 auto; padding: 16px; }
+header { text-align: center; padding: 20px 0 12px; }
+header h1 { font-size: 22px; font-weight: 700; }
+header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+/* Current display */
+.current-display { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+.current-display h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
+.display-preview { display: flex; gap: 12px; align-items: flex-start; }
+.display-preview img { width: 200px; height: 150px; object-fit: contain; background: #000; border: 1px solid var(--border); border-radius: 6px; flex-shrink: 0; }
+.display-preview .no-image { width: 200px; height: 150px; background: #222; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.display-meta { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.display-meta span { color: var(--muted); }
+.display-meta strong { color: var(--text); }
+
+/* Upload */
+.upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+.drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 32px 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(74,158,255,.05); }
+.drop-zone svg { width: 36px; height: 36px; stroke: var(--muted); margin-bottom: 8px; }
+.drop-zone p { color: var(--muted); font-size: 14px; }
+.drop-zone .hint { font-size: 12px; }
+
+/* Preview section */
+.preview-section { display: none; margin-top: 14px; }
+.canvas-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.canvas-wrapper { position: relative; display: inline-block; flex-shrink: 0; }
+canvas { display: block; max-width: 100%; }
+.crop-overlay {
+  position: absolute; border: 2px solid var(--accent);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+  cursor: move; touch-action: none;
+}
+.handle {
+  position: absolute; width: 14px; height: 14px;
+  background: var(--accent); border: 2px solid #fff; border-radius: 2px;
+}
+.handle.tl { top:-7px; left:-7px; cursor:nw-resize; }
+.handle.tr { top:-7px; right:-7px; cursor:ne-resize; }
+.handle.bl { bottom:-7px; left:-7px; cursor:sw-resize; }
+.handle.br { bottom:-7px; right:-7px; cursor:se-resize; }
+.preview-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.control-group { display: flex; align-items: center; gap: 10px; }
+.control-group label { font-size: 13px; color: var(--muted); width: 80px; flex-shrink: 0; }
+.control-group input[type=range] { flex: 1; accent-color: var(--accent); }
+.control-group span { font-size: 13px; width: 32px; text-align: right; flex-shrink: 0; }
+
+/* Buttons */
+.actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn:not(:disabled):hover { opacity: .85; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-small { padding: 8px 14px; font-size: 13px; }
+
+/* Status */
+.status-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; font-size: 13px; }
+.status-text { color: var(--text); }
+.progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; width: 0%; }
+
+/* Tools */
+.tools { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+footer { text-align: center; color: var(--muted); font-size: 12px; padding-top: 8px; }
+footer code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>E-Paper Display</h1>
+    <p>4.2&quot; 400×300 Monochrome</p>
+  </header>
+
+  <!-- Current display state -->
+  <div class="current-display">
+    <h2>Current Display</h2>
+    <div class="display-preview">
+      <div class="no-image" id="noImage">No image yet</div>
+      <img id="currentPreview" style="display:none" alt="Current display content">
+      <div class="display-meta" id="displayMeta">
+        <div><span>Version: </span><strong id="metaVersion">—</strong></div>
+        <div><span>Updated: </span><strong id="metaTime">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-text" id="statusText">Ready — select an image to begin</div>
+    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <!-- Upload card -->
+  <div class="upload-card">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*,.heic,.heif" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Tap to select image<br><span class="hint">or drag &amp; drop</span></p>
+    </div>
+
+    <div class="preview-section" id="previewSection">
+      <div class="canvas-row">
+        <div>
+          <div class="preview-label">Source (drag to crop)</div>
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="sourceCanvas"></canvas>
+            <div class="crop-overlay" id="cropOverlay">
+              <div class="handle tl" data-handle="tl"></div>
+              <div class="handle tr" data-handle="tr"></div>
+              <div class="handle bl" data-handle="bl"></div>
+              <div class="handle br" data-handle="br"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="preview-label">Preview (dithered)</div>
+          <canvas id="previewCanvas" width="200" height="150"></canvas>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Brightness</label>
+          <input type="range" id="brightness" min="-100" max="100" value="0">
+          <span id="brightnessVal">0</span>
+        </div>
+        <div class="control-group">
+          <label>Contrast</label>
+          <input type="range" id="contrast" min="-100" max="100" value="0">
+          <span id="contrastVal">0</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" id="btnReset">Reset</button>
+        <button class="btn btn-primary" id="btnSend">Send to Display</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tools -->
+  <div class="tools">
+    <button class="btn btn-secondary btn-small" id="btnClear">Clear Display</button>
+    <button class="btn btn-secondary btn-small" id="btnRefresh">Refresh Status</button>
+  </div>
+
+  <footer>
+    <p>ESP32 polls <code>/api/content/version</code> every 60 s and fetches <code>/api/content/image</code> on change</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+const DISPLAY_WIDTH = 400;
+const DISPLAY_HEIGHT = 300;
+const ASPECT_RATIO = DISPLAY_WIDTH / DISPLAY_HEIGHT;
+
+const $ = s => document.querySelector(s);
+const dropZone      = $('#dropZone');
+const fileInput     = $('#fileInput');
+const previewSection = $('#previewSection');
+const sourceCanvas  = $('#sourceCanvas');
+const previewCanvas = $('#previewCanvas');
+const cropOverlay   = $('#cropOverlay');
+const canvasWrapper = $('#canvasWrapper');
+const brightnessSlider = $('#brightness');
+const contrastSlider   = $('#contrast');
+const brightnessVal    = $('#brightnessVal');
+const contrastVal      = $('#contrastVal');
+const btnSend   = $('#btnSend');
+const btnReset  = $('#btnReset');
+const btnClear  = $('#btnClear');
+const btnRefresh = $('#btnRefresh');
+const statusText  = $('#statusText');
+const progressBar = $('#progressBar');
+const progressFill = $('#progressFill');
+const noImage      = $('#noImage');
+const currentPreview = $('#currentPreview');
+const metaVersion  = $('#metaVersion');
+const metaTime     = $('#metaTime');
+
+const sourceCtx  = sourceCanvas.getContext('2d', { willReadFrequently: true });
+const previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
+
+let originalImage = null;
+let originalFile  = null;
+let cropRect = { x: 0, y: 0, w: DISPLAY_WIDTH, h: DISPLAY_HEIGHT };
+let scale = 1;
+let isDragging = false;
+let dragHandle = null;
+let dragStart = { x: 0, y: 0 };
+let cropStart = { x: 0, y: 0, w: 0, h: 0 };
+
+// ── Status helpers ───────────────────────────────────────────────
+function setStatus(text) {
+  statusText.textContent = text;
+}
+function showProgress(pct) {
+  progressBar.style.display = 'block';
+  progressFill.style.width = pct + '%';
+}
+function hideProgress() {
+  progressBar.style.display = 'none';
+  progressFill.style.width = '0%';
+}
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 60)   return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(ts * 1000).toLocaleDateString();
+}
+
+// ── Server status ────────────────────────────────────────────────
+async function loadCurrentDisplay() {
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    const meta = data.content;
+    metaVersion.textContent = meta.version || '—';
+    metaTime.textContent = timeAgo(meta.timestamp);
+
+    if (meta.version && meta.version !== 'none' && meta.size > 0) {
+      currentPreview.src = `/api/content/preview?t=${meta.timestamp}`;
+      currentPreview.style.display = '';
+      noImage.style.display = 'none';
+    }
+  } catch (e) {
+    // server unreachable
+  }
+}
+
+// ── File loading ─────────────────────────────────────────────────
+async function handleFile(file) {
+  if (!file) return;
+  originalFile = file;
+  setStatus('Loading image...');
+
+  let loaded = null;
+
+  if ('createImageBitmap' in window) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const c = document.createElement('canvas');
+      c.width = bmp.width; c.height = bmp.height;
+      c.getContext('2d').drawImage(bmp, 0, 0);
+      const img = new Image();
+      img.src = c.toDataURL('image/png');
+      await new Promise((ok, fail) => { img.onload = ok; img.onerror = fail; });
+      loaded = img;
+    } catch (_) {}
+  }
+
+  if (!loaded) {
+    try {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise((ok, fail) => {
+        img.onload  = () => { URL.revokeObjectURL(url); ok(); };
+        img.onerror = () => { URL.revokeObjectURL(url); fail(); };
+        img.src = url;
+      });
+      loaded = img;
+    } catch (_) {}
+  }
+
+  if (loaded) {
+    originalImage = loaded;
+    initCropper(loaded);
+    setStatus('Adjust crop area, then click "Send to Display"');
+  } else {
+    setStatus('Failed to load image — try JPG or PNG.');
+  }
+}
+
+// ── Cropper ──────────────────────────────────────────────────────
+function initCropper(img) {
+  const maxW = Math.min(canvasWrapper.parentElement.clientWidth || 300, 300);
+  const maxH = 280;
+  let dw = img.width, dh = img.height;
+  if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
+  if (dh > maxH) { dw = dw * maxH / dh; dh = maxH; }
+
+  scale = img.width / dw;
+  sourceCanvas.width = dw; sourceCanvas.height = dh;
+  sourceCtx.drawImage(img, 0, 0, dw, dh);
+
+  const cw = Math.min(dw, dh * ASPECT_RATIO);
+  const ch = cw / ASPECT_RATIO;
+  cropRect = { x: (dw - cw) / 2, y: (dh - ch) / 2, w: cw, h: ch };
+
+  updateCropOverlay();
+  updatePreview();
+  previewSection.style.display = 'block';
+}
+
+function updateCropOverlay() {
+  cropOverlay.style.left   = cropRect.x + 'px';
+  cropOverlay.style.top    = cropRect.y + 'px';
+  cropOverlay.style.width  = cropRect.w + 'px';
+  cropOverlay.style.height = cropRect.h + 'px';
+}
+
+function getEventPos(e) {
+  const rect = canvasWrapper.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+function startDrag(e) {
+  e.preventDefault();
+  isDragging = true;
+  dragStart = getEventPos(e);
+  cropStart = { ...cropRect };
+  const tgt = e.target;
+  if (tgt.classList.contains('handle')) dragHandle = tgt.dataset.handle;
+  else dragHandle = 'move';
+}
+function doDrag(e) {
+  if (!isDragging || !originalImage) return;
+  e.preventDefault();
+  const pos = getEventPos(e);
+  const dx = pos.x - dragStart.x, dy = pos.y - dragStart.y;
+  const cW = sourceCanvas.width, cH = sourceCanvas.height;
+
+  if (dragHandle === 'move') {
+    cropRect.x = Math.max(0, Math.min(cW - cropRect.w, cropStart.x + dx));
+    cropRect.y = Math.max(0, Math.min(cH - cropRect.h, cropStart.y + dy));
+  } else {
+    let { x, y, w, h } = cropStart;
+    if (dragHandle.includes('l')) { w = Math.max(50, cropStart.w - dx); x = cropStart.x + cropStart.w - w; }
+    if (dragHandle.includes('r')) { w = Math.max(50, cropStart.w + dx); }
+    if (dragHandle.includes('t')) { h = Math.max(50, cropStart.h - dy); y = cropStart.y + cropStart.h - h; }
+    if (dragHandle.includes('b')) { h = Math.max(50, cropStart.h + dy); }
+    if (w / h > ASPECT_RATIO) w = h * ASPECT_RATIO; else h = w / ASPECT_RATIO;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x + w > cW) { w = cW - x; h = w / ASPECT_RATIO; }
+    if (y + h > cH) { h = cH - y; w = h * ASPECT_RATIO; }
+    cropRect = { x, y, w, h };
+  }
+  updateCropOverlay();
+  updatePreview();
+}
+function endDrag() { isDragging = false; dragHandle = null; }
+
+// ── Dithering preview (client-side, for instant feedback) ────────
+function applyDithering(canvas) {
+  const ctx = canvas.getContext('2d');
+  const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = id.data, w = canvas.width, h = canvas.height;
+  const bright = parseInt(brightnessSlider.value);
+  const cont   = parseInt(contrastSlider.value);
+  const cf = (259 * (cont + 255)) / (255 * (259 - cont));
+
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    let g = 0.299 * d[i*4] + 0.587 * d[i*4+1] + 0.114 * d[i*4+2];
+    g += bright * 2.55;
+    g = cf * (g - 128) + 128;
+    gray[i] = Math.max(0, Math.min(255, g));
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const old = gray[idx], nw = old < 128 ? 0 : 255, err = old - nw;
+      gray[idx] = nw;
+      if (x+1 < w)           gray[idx+1]       += err * 7/16;
+      if (y+1 < h) {
+        if (x > 0)            gray[(y+1)*w+x-1] += err * 3/16;
+                              gray[(y+1)*w+x]   += err * 5/16;
+        if (x+1 < w)          gray[(y+1)*w+x+1] += err * 1/16;
+      }
+    }
+  }
+  for (let i = 0; i < w * h; i++) {
+    const v = gray[i] < 128 ? 0 : 255;
+    d[i*4] = d[i*4+1] = d[i*4+2] = v; d[i*4+3] = 255;
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
+function updatePreview() {
+  if (!originalImage) return;
+  const sx = Math.round(cropRect.x * scale), sy = Math.round(cropRect.y * scale);
+  const sw = Math.round(cropRect.w * scale), sh = Math.round(cropRect.h * scale);
+  // Preview canvas is half resolution (200×150) for display speed
+  previewCanvas.width = 200; previewCanvas.height = 150;
+  previewCtx.fillStyle = 'white';
+  previewCtx.fillRect(0, 0, 200, 150);
+  try { previewCtx.drawImage(originalImage, sx, sy, sw, sh, 0, 0, 200, 150); } catch (_) { return; }
+  applyDithering(previewCanvas);
+}
+
+// ── Send to server ───────────────────────────────────────────────
+async function sendImage() {
+  if (!originalFile) { setStatus('No image loaded'); return; }
+  btnSend.disabled = true;
+  setStatus('Uploading to server...');
+  showProgress(10);
+
+  try {
+    const srcX = Math.round(cropRect.x * scale);
+    const srcY = Math.round(cropRect.y * scale);
+    const srcW = Math.round(cropRect.w * scale);
+    const srcH = Math.round(cropRect.h * scale);
+
+    const form = new FormData();
+    form.append('file', originalFile);
+    form.append('crop_x', srcX);
+    form.append('crop_y', srcY);
+    form.append('crop_w', srcW);
+    form.append('crop_h', srcH);
+    form.append('brightness', brightnessSlider.value);
+    form.append('contrast', contrastSlider.value);
+
+    showProgress(40);
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    showProgress(90);
+    const data = await res.json();
+
+    if (res.ok) {
+      showProgress(100);
+      setStatus(`Uploaded! Version ${data.version} — display refreshes within the poll interval.`);
+      await loadCurrentDisplay();
+    } else {
+      setStatus('Error: ' + (data.error || 'upload failed'));
+    }
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+  } finally {
+    btnSend.disabled = false;
+    setTimeout(hideProgress, 1200);
+  }
+}
+
+// ── Event wiring ─────────────────────────────────────────────────
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+cropOverlay.addEventListener('mousedown', startDrag);
+document.addEventListener('mousemove', doDrag);
+document.addEventListener('mouseup', endDrag);
+cropOverlay.addEventListener('touchstart', startDrag, { passive: false });
+document.addEventListener('touchmove', doDrag, { passive: false });
+document.addEventListener('touchend', endDrag);
+cropOverlay.querySelectorAll('.handle').forEach(h => {
+  h.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e); });
+  h.addEventListener('touchstart', e => { e.stopPropagation(); startDrag(e); }, { passive: false });
+});
+
+brightnessSlider.addEventListener('input', () => { brightnessVal.textContent = brightnessSlider.value; updatePreview(); });
+contrastSlider.addEventListener('input',   () => { contrastVal.textContent   = contrastSlider.value;   updatePreview(); });
+
+btnSend.addEventListener('click', sendImage);
+btnReset.addEventListener('click', () => {
+  brightnessSlider.value = contrastSlider.value = 0;
+  brightnessVal.textContent = contrastVal.textContent = '0';
+  if (originalImage) initCropper(originalImage);
+});
+btnClear.addEventListener('click', async () => {
+  setStatus('Sending clear command...');
+  try {
+    const res = await fetch('/api/clear', { method: 'POST' });
+    const d = await res.json();
+    setStatus(d.message || 'Cleared');
+    await loadCurrentDisplay();
+  } catch (e) { setStatus('Error: ' + e.message); }
+});
+btnRefresh.addEventListener('click', () => { loadCurrentDisplay(); setStatus('Status refreshed'); });
+
+// ── Init ─────────────────────────────────────────────────────────
+loadCurrentDisplay();
+
+})();
+</script>
+</body>
+</html>

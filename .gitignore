@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Original sample scripts (kept for reference, not part of the project)
+EPaper_AP_Portal/
+
+# Server runtime data
+server/data/
