@@ -11,3 +11,6 @@ EPaper_AP_Portal/
 
 # Server runtime data
 server/data/
+
+# Device config (contains credentials — use config_sample.h as template)
+EPaper_Remote_Client/config.h

@@ -10,10 +10,16 @@
 #include "image_buffer.h"
 #include "epd_driver.h"
 
-// Build a full URL from a path component
+// Build a full URL from a path component.
+// SERVER_HOST may be bare ("162.141.92.169") or accidentally include a scheme
+// ("http://162.141.92.169") — strip it either way.
 static String buildUrl(const char* path) {
+    const char* host = SERVER_HOST;
+    if (strncmp(host, "https://", 8) == 0) host += 8;
+    else if (strncmp(host, "http://",  7) == 0) host += 7;
+
     String url = HTTPS_ENABLED ? "https://" : "http://";
-    url += SERVER_HOST;
+    url += host;
     url += ":";
     url += SERVER_PORT;
     url += path;

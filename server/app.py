@@ -50,8 +50,19 @@ def apply_brightness_contrast(arr, brightness=0, contrast=0):
 
 def process_image(image_data, crop=None, brightness=0, contrast=0):
     """Crop → resize → grayscale → brightness/contrast → dither → pack 1-bit."""
-    img = Image.open(io.BytesIO(image_data))
-    img = ImageOps.exif_transpose(img)
+    try:
+        img = Image.open(io.BytesIO(image_data))
+        img.load()  # force decode so format errors surface here
+    except Exception as e:
+        raise ValueError(
+            f"Pillow cannot read image ({len(image_data)} bytes received). "
+            f"Supported formats: JPEG, PNG, WebP, BMP, GIF. "
+            f"Detail: {e}"
+        )
+    try:
+        img = ImageOps.exif_transpose(img)
+    except Exception:
+        pass  # exif_transpose is best-effort
     img = img.convert('RGB')
 
     if crop and crop.get('w', 0) > 1 and crop.get('h', 0) > 1:
@@ -128,7 +139,10 @@ def api_upload():
     if not file.filename:
         return jsonify({'error': 'No file selected'}), 400
 
+    file.stream.seek(0)
     image_data = file.read()
+    if len(image_data) == 0:
+        return jsonify({'error': 'Received empty file — upload may have failed'}), 400
     if len(image_data) > MAX_FILE_SIZE:
         return jsonify({'error': 'File too large (max 10 MB)'}), 400
 

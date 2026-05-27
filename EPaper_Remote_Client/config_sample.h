@@ -4,14 +4,14 @@
 // ===========================================
 // WiFi — station mode (connects to your router)
 // ===========================================
-#define WIFI_SSID      "ROSSandDAISYandANA"
-#define WIFI_PASSWORD  "treesou1"
+#define WIFI_SSID      "YourWiFiSSID"
+#define WIFI_PASSWORD  "YourWiFiPassword"
 #define WIFI_TIMEOUT_MS  15000
 
 // ===========================================
 // Remote Server
 // ===========================================
-#define SERVER_HOST    "http://162.141.92.169"  // domain or IP
+#define SERVER_HOST    "your-server-ip-or-domain"  // bare host only, no http://
 #define SERVER_PORT    80   // 80 for HTTP, 443 for HTTPS
 #define HTTPS_ENABLED  0    // 0=HTTP, 1=HTTPS (uses setInsecure — no cert pinning)
 
@@ -25,7 +25,7 @@
 #define POLL_INTERVAL_MS  60000UL   // Check for updates every 60 seconds
 
 // ===========================================
-// E-Paper Display (4.2" V2, 400×300 mono)
+// E-Paper Display (4.2" V2, 400x300 mono)
 // ===========================================
 #define EPD_WIDTH   400
 #define EPD_HEIGHT  300
