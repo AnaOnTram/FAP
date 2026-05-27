@@ -7,6 +7,12 @@ Serves web GUI for image upload and REST API for ESP32 polling.
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from PIL import Image, ImageOps
 import io
+
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass  # pillow-heif not installed; HEIC uploads will fail gracefully
 import os
 import hashlib
 import time
@@ -54,9 +60,10 @@ def process_image(image_data, crop=None, brightness=0, contrast=0):
         img = Image.open(io.BytesIO(image_data))
         img.load()  # force decode so format errors surface here
     except Exception as e:
+        magic = image_data[:12].hex() if image_data else 'empty'
         raise ValueError(
-            f"Pillow cannot read image ({len(image_data)} bytes received). "
-            f"Supported formats: JPEG, PNG, WebP, BMP, GIF. "
+            f"Pillow cannot read image ({len(image_data)} bytes, magic: {magic}). "
+            f"Supported formats: JPEG, PNG, WebP, BMP, GIF, HEIC. "
             f"Detail: {e}"
         )
     try:
