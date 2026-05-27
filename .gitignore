@@ -14,3 +14,4 @@ server/data/
 
 # Device config (contains credentials — use config_sample.h as template)
 EPaper_Remote_Client/config.h
+EPaper_Remote_Client_DeepSleep/config.h
