@@ -229,6 +229,17 @@ def require_admin(fn):
 
 def default_font(size=24):
     candidates = [
+        '/System/Library/Fonts/PingFang.ttc',
+        '/System/Library/Fonts/STHeiti Medium.ttc',
+        '/System/Library/Fonts/Hiragino Sans GB.ttc',
+        '/System/Library/Fonts/Supplemental/Songti.ttc',
+        '/System/Library/Fonts/CJKSymbolsFallback.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJKtc-Regular.otf',
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/truetype/arphic/uming.ttc',
         '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
         '/System/Library/Fonts/Supplemental/Arial.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
@@ -243,18 +254,34 @@ def default_font(size=24):
 def wrap_text(draw, text, font, max_width):
     lines = []
     for raw_line in (text or '').splitlines() or ['']:
-        words = raw_line.split()
-        if not words:
+        tokens = raw_line.split(' ')
+        if not raw_line:
             lines.append('')
             continue
-        line = words[0]
-        for word in words[1:]:
-            trial = f'{line} {word}'
+
+        line = ''
+        for i, token in enumerate(tokens):
+            if token == '' and i < len(tokens) - 1:
+                token = ' '
+            separator = ' ' if line and token != ' ' else ''
+            trial = f'{line}{separator}{token}'
             if draw.textbbox((0, 0), trial, font=font)[2] <= max_width:
                 line = trial
+            elif draw.textbbox((0, 0), token, font=font)[2] > max_width:
+                if line:
+                    lines.append(line)
+                    line = ''
+                for char in token:
+                    trial = f'{line}{char}'
+                    if line and draw.textbbox((0, 0), trial, font=font)[2] > max_width:
+                        lines.append(line)
+                        line = char
+                    else:
+                        line = trial
             else:
-                lines.append(line)
-                line = word
+                if line:
+                    lines.append(line)
+                line = token
         lines.append(line)
     return lines
 
@@ -568,7 +595,7 @@ def api_admin_create_user():
                 INSERT INTO users (username, password_hash, created_at, role, status, must_reset_password)
                 VALUES (?, ?, ?, ?, 'active', ?)
                 """,
-                (username, generate_password_hash(password), int(time.time()), role, 1 if role == 'admin' else 0),
+                (username, generate_password_hash(password), int(time.time()), role, 0),
             )
     except sqlite3.IntegrityError:
         return jsonify({'error': 'That username already exists.'}), 409

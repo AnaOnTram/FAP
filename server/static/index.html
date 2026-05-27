@@ -67,7 +67,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
-  font-family: 'Roboto Flex', system-ui, sans-serif;
+  font-family: 'Roboto Flex', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   font-variation-settings: "opsz" 14, "wdth" 100, "wght" 400, "GRAD" 0;
   background:
     radial-gradient(circle at 18% 8%, rgba(215,227,255,.9), transparent 34rem),
@@ -469,30 +469,33 @@ canvas {
   gap: 10px;
 }
 .slider-group {
-  padding: 12px;
+  padding: 10px 12px;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  grid-template-columns: 46px minmax(0, 1fr) 48px;
   align-items: center;
   gap: 12px;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--md-surface-container-high) 74%, white);
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 68%, white);
+  min-height: 72px;
+  border-radius: 16px;
+  background: #7167f1;
+  border: 1px solid color-mix(in srgb, #7167f1 82%, white);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 8px 18px rgba(53,48,140,.16);
   transition: border-radius .45s var(--spring-expressive), transform .45s var(--spring-expressive), background .25s var(--spring-standard);
 }
 .slider-group:focus-within {
-  border-radius: 16px 28px 16px 28px;
-  background: color-mix(in srgb, var(--md-primary-container) 56%, white);
+  border-radius: 12px 22px 12px 22px;
+  background: #665be6;
 }
 .slider-leading {
-  width: 42px;
-  height: 42px;
-  border-radius: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  color: var(--md-on-primary-container);
-  background: var(--md-primary-container);
+  color: #fbff7a;
+  background: transparent;
   transition: border-radius .45s var(--spring-expressive), transform .45s var(--spring-expressive);
 }
+.slider-leading .material-symbols-rounded { font-size: 31px; font-variation-settings: "FILL" 0, "wght" 620, "GRAD" 0, "opsz" 32; }
 .slider-group:focus-within .slider-leading {
   border-radius: 22px 12px 20px 12px;
   transform: scale(1.04);
@@ -504,61 +507,61 @@ canvas {
 }
 .slider-label {
   font-size: 14px;
-  color: var(--md-on-surface);
-  font-variation-settings: "opsz" 14, "wdth" 103, "wght" 620, "GRAD" 0;
+  color: #ffffff;
+  font-variation-settings: "opsz" 14, "wdth" 103, "wght" 690, "GRAD" 0;
 }
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
-  height: 36px;
+  height: 28px;
   background: transparent;
   cursor: pointer;
   outline: none;
 }
 input[type=range]::-webkit-slider-runnable-track {
-  height: 14px;
+  height: 6px;
   border-radius: var(--shape-full);
-  background: linear-gradient(to right, var(--md-primary) var(--track-fill, 50%), var(--md-surface-variant) var(--track-fill, 50%));
-  box-shadow: inset 0 0 0 1px rgba(68,71,79,.08);
+  background: linear-gradient(to right, #fbff7a var(--track-fill, 50%), #27275f var(--track-fill, 50%));
+  box-shadow: none;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 6px;
-  height: 28px;
+  width: 5px;
+  height: 34px;
   border-radius: var(--shape-full);
-  background: var(--md-primary);
-  margin-top: -7px;
-  box-shadow: var(--elev-1);
+  background: #fbff7a;
+  margin-top: -14px;
+  box-shadow: 0 0 0 2px rgba(251,255,122,.18);
   transition: width .35s var(--spring-expressive), transform .35s var(--spring-expressive);
 }
 input[type=range]:hover::-webkit-slider-thumb,
-input[type=range]:active::-webkit-slider-thumb { width: 18px; transform: scaleY(1.08); }
+input[type=range]:active::-webkit-slider-thumb { width: 8px; transform: scaleY(1.08); }
 input[type=range]::-moz-range-track {
-  height: 14px;
+  height: 6px;
   border-radius: var(--shape-full);
-  background: var(--md-surface-variant);
+  background: #27275f;
 }
 input[type=range]::-moz-range-progress {
-  height: 14px;
+  height: 6px;
   border-radius: var(--shape-full);
-  background: var(--md-primary);
+  background: #fbff7a;
 }
 input[type=range]::-moz-range-thumb {
-  width: 8px;
-  height: 28px;
+  width: 5px;
+  height: 34px;
   border-radius: var(--shape-full);
-  background: var(--md-primary);
+  background: #fbff7a;
   border: none;
-  box-shadow: var(--elev-1);
+  box-shadow: 0 0 0 2px rgba(251,255,122,.18);
 }
 .slider-value {
   font-size: 12px;
   font-family: 'Roboto Mono', monospace;
-  color: var(--md-on-primary-container);
+  color: #ffffff;
   text-align: center;
   border-radius: var(--shape-full);
   padding: 5px 0;
-  background: var(--md-primary-container);
+  background: rgba(39,39,95,.4);
 }
 
 .action-bar {
@@ -683,6 +686,7 @@ input[type=range]::-moz-range-thumb {
   color: var(--md-on-surface);
   background: color-mix(in srgb, var(--md-surface-container-lowest) 76%, white);
   padding: 12px 14px;
+  font-family: 'Roboto Flex', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   resize: vertical;
   transition: border-radius .45s var(--spring-expressive), border-color .2s var(--spring-standard), background .2s var(--spring-standard);
 }
@@ -1065,6 +1069,24 @@ input[type=range]::-moz-range-thumb {
               <label for="imageTextOverlay">Optional overlay</label>
               <textarea id="imageTextOverlay" maxlength="160" placeholder="Add text over the image before compression"></textarea>
             </div>
+            <div class="slider-stack">
+              <div class="slider-group">
+                <div class="slider-leading" aria-hidden="true"><span class="material-symbols-rounded">swap_horiz</span></div>
+                <div class="slider-content">
+                  <label class="slider-label" for="overlayX">Text X</label>
+                  <input type="range" id="overlayX" min="0" max="100" value="50">
+                </div>
+                <span class="slider-value" id="overlayXVal">50</span>
+              </div>
+              <div class="slider-group">
+                <div class="slider-leading" aria-hidden="true"><span class="material-symbols-rounded">swap_vert</span></div>
+                <div class="slider-content">
+                  <label class="slider-label" for="overlayY">Text Y</label>
+                  <input type="range" id="overlayY" min="0" max="100" value="88">
+                </div>
+                <span class="slider-value" id="overlayYVal">88</span>
+              </div>
+            </div>
           </div>
 
           <div class="divider"></div>
@@ -1176,6 +1198,10 @@ const imagePane  = $('#imagePane');
 const textPane   = $('#textPane');
 const textRenderInput = $('#textRenderInput');
 const imageTextOverlay = $('#imageTextOverlay');
+const overlayXSlider = $('#overlayX');
+const overlayYSlider = $('#overlayY');
+const overlayXVal = $('#overlayXVal');
+const overlayYVal = $('#overlayYVal');
 const noImage    = $('#noImage');
 const curPrev    = $('#currentPreview');
 const metaVer    = $('#metaVersion');
@@ -1321,18 +1347,9 @@ function hideProgress() {
 function updateSliderTrack(input) {
   const min = +input.min, max = +input.max, val = +input.value;
   const pct = ((val - min) / (max - min)) * 100;
-  const primary = getComputedStyle(document.documentElement)
-                    .getPropertyValue('--md-primary').trim();
-  const muted   = getComputedStyle(document.documentElement)
-                    .getPropertyValue('--md-surface-variant').trim();
   input.style.setProperty('--track-fill', `${pct}%`);
-  // Works in Chrome/Edge/Safari; Firefox uses ::-moz-range-progress natively
-  try {
-    input.style.backgroundImage =
-      `linear-gradient(to right, ${primary} ${pct}%, ${muted} ${pct}%)`;
-  } catch (_) {}
 }
-[bSlider, cSlider, fontSlider].forEach(s => updateSliderTrack(s));
+[bSlider, cSlider, fontSlider, overlayXSlider, overlayYSlider].forEach(s => updateSliderTrack(s));
 
 function setAuthenticated(user) {
   currentUser = user;
@@ -1597,34 +1614,65 @@ function drawImageOverlay(ctx, width, height, scaleFactor = 1) {
   const pad = Math.max(8, Math.round(14 * scaleFactor));
   const fontSize = Math.max(12, Math.round(26 * scaleFactor));
   ctx.save();
-  ctx.font = `700 ${fontSize}px "Roboto Flex", system-ui, sans-serif`;
-  ctx.textBaseline = 'bottom';
-  const maxWidth = width - pad * 2;
-  const words = text.split(/\s+/);
-  const lines = [];
-  let line = words.shift() || '';
-  for (const word of words) {
-    const trial = `${line} ${word}`;
-    if (ctx.measureText(trial).width <= maxWidth) {
-      line = trial;
-    } else {
-      lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
+  ctx.font = `700 ${fontSize}px "Roboto Flex", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif`;
+  ctx.textBaseline = 'top';
+  const maxWidth = Math.min(width - pad * 2, Math.round(width * 0.84));
+  const lines = wrapCanvasText(ctx, text, maxWidth - pad);
   const lineHeight = Math.round(fontSize * 1.2);
-  const boxHeight = lines.length * lineHeight + pad;
+  const textWidth = Math.min(maxWidth - pad, Math.max(...lines.map(item => ctx.measureText(item).width), 0));
+  const boxWidth = Math.min(maxWidth, Math.ceil(textWidth + pad * 2));
+  const boxHeight = lines.length * lineHeight + pad * 1.35;
+  const anchorX = (+overlayXSlider.value / 100) * width;
+  const anchorY = (+overlayYSlider.value / 100) * height;
+  const boxX = Math.max(pad / 2, Math.min(width - boxWidth - pad / 2, anchorX - boxWidth / 2));
+  const boxY = Math.max(pad / 2, Math.min(height - boxHeight - pad / 2, anchorY - boxHeight / 2));
   ctx.fillStyle = 'rgba(255,255,255,.86)';
   ctx.strokeStyle = 'rgba(0,0,0,.82)';
-  roundRect(ctx, pad, height - boxHeight - pad, maxWidth, boxHeight, Math.round(12 * scaleFactor));
+  roundRect(ctx, boxX, boxY, boxWidth, boxHeight, Math.round(12 * scaleFactor));
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = '#000';
   lines.forEach((item, i) => {
-    ctx.fillText(item, pad * 1.5, height - boxHeight + pad / 2 + i * lineHeight);
+    ctx.fillText(item, boxX + pad, boxY + pad * 0.68 + i * lineHeight);
   });
   ctx.restore();
+}
+
+function wrapCanvasText(ctx, text, maxWidth) {
+  const lines = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    if (!rawLine) {
+      lines.push('');
+      continue;
+    }
+    const tokens = /\s/.test(rawLine)
+      ? rawLine.split(/(\s+)/).filter(Boolean)
+      : Array.from(rawLine);
+    let line = '';
+    for (const token of tokens) {
+      const trial = `${line}${token}`;
+      if (ctx.measureText(trial).width <= maxWidth) {
+        line = trial;
+      } else if (ctx.measureText(token).width > maxWidth) {
+        if (line.trim()) lines.push(line.trim());
+        line = '';
+        for (const char of Array.from(token)) {
+          const charTrial = `${line}${char}`;
+          if (line && ctx.measureText(charTrial).width > maxWidth) {
+            lines.push(line);
+            line = char;
+          } else {
+            line = charTrial;
+          }
+        }
+      } else {
+        if (line.trim()) lines.push(line.trim());
+        line = token.trimStart();
+      }
+    }
+    if (line.trim()) lines.push(line.trim());
+  }
+  return lines.length ? lines : [''];
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -1766,6 +1814,8 @@ cropOvl.querySelectorAll('.handle').forEach(h => {
 bSlider.addEventListener('input', () => { bVal.textContent = bSlider.value; updateSliderTrack(bSlider); updatePreview(); });
 cSlider.addEventListener('input', () => { cVal.textContent = cSlider.value; updateSliderTrack(cSlider); updatePreview(); });
 fontSlider.addEventListener('input', () => { fontVal.textContent = fontSlider.value; updateSliderTrack(fontSlider); });
+overlayXSlider.addEventListener('input', () => { overlayXVal.textContent = overlayXSlider.value; updateSliderTrack(overlayXSlider); updatePreview(); });
+overlayYSlider.addEventListener('input', () => { overlayYVal.textContent = overlayYSlider.value; updateSliderTrack(overlayYSlider); updatePreview(); });
 imageTextOverlay.addEventListener('input', updatePreview);
 modeImage.addEventListener('click', () => setMode('image'));
 modeText.addEventListener('click', () => setMode('text'));
@@ -1781,9 +1831,13 @@ btnRenderText.addEventListener('click', renderText);
 btnReset.addEventListener('click', () => {
   pulseControl(btnReset);
   bSlider.value = cSlider.value = 0;
+  overlayXSlider.value = 50;
+  overlayYSlider.value = 88;
   bVal.textContent = cVal.textContent = '0';
+  overlayXVal.textContent = '50';
+  overlayYVal.textContent = '88';
   imageTextOverlay.value = '';
-  [bSlider, cSlider].forEach(updateSliderTrack);
+  [bSlider, cSlider, overlayXSlider, overlayYSlider].forEach(updateSliderTrack);
   if (originalImage) initCropper(originalImage);
 });
 btnClear.addEventListener('click', async () => {
