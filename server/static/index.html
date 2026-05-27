@@ -2,274 +2,600 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f7f2fa">
 <title>E-Paper Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── M3 Baseline Color Tokens ─────────────────────────────────── */
 :root {
-  --bg: #111;
-  --surface: #1e1e1e;
-  --border: #333;
-  --text: #eee;
-  --muted: #888;
-  --accent: #4a9eff;
-  --danger: #e05252;
-  --success: #52a852;
-  --radius: 10px;
+  --md-primary:                  #6750A4;
+  --md-on-primary:               #FFFFFF;
+  --md-primary-container:        #EADDFF;
+  --md-on-primary-container:     #21005D;
+  --md-secondary:                #625B71;
+  --md-on-secondary:             #FFFFFF;
+  --md-secondary-container:      #E8DEF8;
+  --md-on-secondary-container:   #1D192B;
+  --md-tertiary-container:       #FFD8E4;
+  --md-on-tertiary-container:    #31111D;
+  --md-error:                    #B3261E;
+  --md-error-container:          #F9DEDC;
+  --md-on-error-container:       #410E0B;
+  --md-background:               #FFFBFE;
+  --md-on-background:            #1C1B1F;
+  --md-surface:                  #FFFBFE;
+  --md-on-surface:               #1C1B1F;
+  --md-surface-variant:          #E7E0EC;
+  --md-on-surface-variant:       #49454F;
+  --md-outline:                  #79747E;
+  --md-outline-variant:          #CAC4D0;
+  --md-surface-container-low:    #F7F2FA;
+  --md-surface-container:        #F3EDF7;
+  --md-surface-container-high:   #ECE6F0;
+  --md-surface-container-highest:#E6E0E9;
+  --md-inverse-surface:          #313033;
+  --md-inverse-on-surface:       #F4EFF4;
+  --md-inverse-primary:          #D0BCFF;
+  --md-scrim:                    rgba(0,0,0,0.32);
+
+  /* Shape scale */
+  --shape-xs:   4px;
+  --shape-sm:   8px;
+  --shape-md:  12px;
+  --shape-lg:  16px;
+  --shape-xl:  28px;
+  --shape-full:9999px;
+
+  /* Elevation (tonal surface + shadow) */
+  --elev-1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+  --elev-2: 0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.15);
+  --elev-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.30);
 }
-body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 15px; min-height: 100vh; padding-bottom: 24px; }
-.container { max-width: 640px; margin: 0 auto; padding: 16px; }
-header { text-align: center; padding: 20px 0 12px; }
-header h1 { font-size: 22px; font-weight: 700; }
-header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
-/* Current display */
-.current-display { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
-.current-display h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
-.display-preview { display: flex; gap: 12px; align-items: flex-start; }
-.display-preview img { width: 200px; height: 150px; object-fit: contain; background: #000; border: 1px solid var(--border); border-radius: 6px; flex-shrink: 0; }
-.display-preview .no-image { width: 200px; height: 150px; background: #222; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; flex-shrink: 0; }
-.display-meta { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
-.display-meta span { color: var(--muted); }
-.display-meta strong { color: var(--text); }
+/* ─── Reset ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Roboto', system-ui, sans-serif;
+  background: var(--md-surface-container-low);
+  color: var(--md-on-background);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* Upload */
-.upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
-.drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 32px 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
-.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(74,158,255,.05); }
-.drop-zone svg { width: 36px; height: 36px; stroke: var(--muted); margin-bottom: 8px; }
-.drop-zone p { color: var(--muted); font-size: 14px; }
-.drop-zone .hint { font-size: 12px; }
+/* ─── Top App Bar ───────────────────────────────────────────────── */
+.top-app-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--md-surface-container);
+  height: 64px;
+  padding: 0 4px 0 16px;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: var(--elev-1);
+}
+.app-bar-leading { color: var(--md-on-surface-variant); width: 24px; height: 24px; flex-shrink: 0; }
+.app-bar-titles  { flex: 1; overflow: hidden; }
+.app-bar-title   { font-size: 22px; font-weight: 400; color: var(--md-on-surface); line-height: 1.27; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar-sub     { font-size: 11px; color: var(--md-on-surface-variant); letter-spacing: .04em; margin-top: 1px; }
 
-/* Preview section */
-.preview-section { display: none; margin-top: 14px; }
-.canvas-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.canvas-wrapper { position: relative; display: inline-block; flex-shrink: 0; }
-canvas { display: block; max-width: 100%; }
+/* ─── Linear Progress ──────────────────────────────────────────── */
+.progress-track {
+  height: 4px; background: var(--md-surface-variant);
+  overflow: hidden; display: none;
+}
+.progress-track.visible { display: block; }
+.progress-fill {
+  height: 100%; width: 0%;
+  background: var(--md-primary);
+  transition: width .28s cubic-bezier(.2,0,0,1);
+  border-radius: 2px;
+}
+
+/* ─── Icon Button ───────────────────────────────────────────────── */
+.icon-btn {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: var(--shape-full);
+  border: none; background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; transition: color .2s;
+}
+.icon-btn::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: currentColor; opacity: 0; transition: opacity .2s;
+}
+.icon-btn:hover::before  { opacity: .08; }
+.icon-btn:active::before { opacity: .12; }
+.icon-btn svg { width: 24px; height: 24px; pointer-events: none; position: relative; }
+
+/* ─── Page Layout ───────────────────────────────────────────────── */
+.page { max-width: 1140px; margin: 0 auto; padding: 20px 16px 40px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 780px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { order: -1; }
+}
+
+/* ─── Cards ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--md-surface-container-low);
+  border-radius: var(--shape-md);
+  overflow: hidden;
+}
+.card-elevated {
+  background: var(--md-surface-container-low);
+  border-radius: var(--shape-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+.card + .card, .card-elevated + .card, .card + .card-elevated, .card-elevated + .card-elevated {
+  margin-top: 12px;
+}
+
+.card-header { padding: 16px 16px 0; display: flex; align-items: flex-start; gap: 8px; }
+.card-header-text { flex: 1; }
+.card-title    { font-size: 16px; font-weight: 500; color: var(--md-on-surface); letter-spacing: .01em; }
+.card-subtitle { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+.card-body     { padding: 16px; }
+
+/* ─── Divider ───────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--md-outline-variant); margin: 0; }
+
+/* ─── Drop Zone ─────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.drop-zone:hover   { border-color: var(--md-primary); background: rgba(103,80,164,.05); }
+.drop-zone.dragover{ border-color: var(--md-primary); background: rgba(103,80,164,.08); }
+.drop-zone-icon    { width: 48px; height: 48px; margin: 0 auto 12px; color: var(--md-on-surface-variant); }
+.drop-zone-primary { font-size: 16px; color: var(--md-on-surface); margin-bottom: 4px; font-weight: 500; }
+.drop-zone-hint    { font-size: 13px; color: var(--md-on-surface-variant); }
+
+/* ─── Preview Section ───────────────────────────────────────────── */
+.preview-content { padding: 0 16px 8px; }
+.section-label {
+  font-size: 11px; font-weight: 500; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--md-on-surface-variant);
+  margin-bottom: 8px; margin-top: 16px;
+}
+.canvas-row   { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.canvas-col   { display: flex; flex-direction: column; }
+.canvas-wrapper { position: relative; display: inline-block; line-height: 0; }
+canvas { display: block; border-radius: var(--shape-sm); background: #000; }
+#previewCanvas { border: 1px solid var(--md-outline-variant); border-radius: var(--shape-sm); }
+
+/* Crop overlay */
 .crop-overlay {
-  position: absolute; border: 2px solid var(--accent);
-  box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+  position: absolute;
+  border: 2px solid var(--md-primary);
+  box-shadow: 0 0 0 9999px rgba(28,27,31,.5);
   cursor: move; touch-action: none;
 }
 .handle {
-  position: absolute; width: 14px; height: 14px;
-  background: var(--accent); border: 2px solid #fff; border-radius: 2px;
+  position: absolute;
+  width: 16px; height: 16px;
+  background: var(--md-primary);
+  border: 2px solid var(--md-on-primary);
+  border-radius: var(--shape-xs);
 }
-.handle.tl { top:-7px; left:-7px; cursor:nw-resize; }
-.handle.tr { top:-7px; right:-7px; cursor:ne-resize; }
-.handle.bl { bottom:-7px; left:-7px; cursor:sw-resize; }
-.handle.br { bottom:-7px; right:-7px; cursor:se-resize; }
-.preview-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 8px; }
+.handle.tl { top:-8px;  left:-8px;  cursor: nw-resize; }
+.handle.tr { top:-8px;  right:-8px; cursor: ne-resize; }
+.handle.bl { bottom:-8px; left:-8px;  cursor: sw-resize; }
+.handle.br { bottom:-8px; right:-8px; cursor: se-resize; }
 
-/* Controls */
-.controls { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-.control-group { display: flex; align-items: center; gap: 10px; }
-.control-group label { font-size: 13px; color: var(--muted); width: 80px; flex-shrink: 0; }
-.control-group input[type=range] { flex: 1; accent-color: var(--accent); }
-.control-group span { font-size: 13px; width: 32px; text-align: right; flex-shrink: 0; }
+/* ─── Sliders ───────────────────────────────────────────────────── */
+.slider-group   { padding: 4px 0; display: flex; align-items: center; gap: 12px; }
+.slider-label   {
+  font-size: 14px; font-weight: 500;
+  color: var(--md-on-surface-variant);
+  width: 88px; flex-shrink: 0;
+}
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 16px; background: transparent;
+  cursor: pointer; outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--md-surface-variant); /* overridden by JS */
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--md-primary);
+  margin-top: -8px;
+  box-shadow: var(--elev-1);
+  transition: transform .1s;
+}
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.1); }
+input[type=range]::-moz-range-track {
+  height: 4px; border-radius: 2px;
+  background: var(--md-surface-variant);
+}
+input[type=range]::-moz-range-progress {
+  height: 4px; border-radius: 2px;
+  background: var(--md-primary);
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--md-primary); border: none;
+  box-shadow: var(--elev-1);
+}
+.slider-value {
+  font-size: 12px; font-family: 'Roboto Mono', monospace;
+  color: var(--md-on-surface-variant);
+  width: 30px; text-align: right; flex-shrink: 0;
+}
 
-/* Buttons */
-.actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
-.btn:not(:disabled):hover { opacity: .85; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-secondary { background: var(--border); color: var(--text); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-small { padding: 8px 14px; font-size: 13px; }
+/* ─── Action Bar ────────────────────────────────────────────────── */
+.action-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px 16px; justify-content: flex-end; flex-wrap: wrap;
+}
 
-/* Status */
-.status-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; font-size: 13px; }
-.status-text { color: var(--text); }
-.progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
-.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; width: 0%; }
+/* ─── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 24px;
+  border-radius: var(--shape-full);
+  font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 500;
+  letter-spacing: .01em; border: none; cursor: pointer;
+  white-space: nowrap; position: relative; overflow: hidden;
+  transition: box-shadow .2s;
+}
+.btn:disabled { opacity: .38; cursor: not-allowed; pointer-events: none; }
+.btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: currentColor; opacity: 0; transition: opacity .2s;
+}
+.btn:not(:disabled):hover::before   { opacity: .08; }
+.btn:not(:disabled):active::before  { opacity: .12; }
+.btn svg { pointer-events: none; position: relative; flex-shrink: 0; }
 
-/* Tools */
-.tools { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-footer { text-align: center; color: var(--muted); font-size: 12px; padding-top: 8px; }
-footer code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+.btn-filled   { background: var(--md-primary);             color: var(--md-on-primary); }
+.btn-filled:not(:disabled):hover { box-shadow: var(--elev-1); }
+
+.btn-tonal    { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.btn-outlined {
+  background: transparent; color: var(--md-primary);
+  border: 1px solid var(--md-outline); padding: 0 23px;
+}
+.btn-text     { background: transparent; color: var(--md-primary); padding: 0 12px; }
+
+.btn-sm { height: 36px; padding: 0 16px; font-size: 13px; }
+.btn-block { width: 100%; }
+
+/* ─── Chips ─────────────────────────────────────────────────────── */
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 32px; padding: 0 12px;
+  border-radius: var(--shape-full);
+  border: 1px solid var(--md-outline-variant);
+  font-size: 13px; color: var(--md-on-surface-variant);
+}
+.chip-key   { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+.chip-val   { font-family: 'Roboto Mono', monospace; color: var(--md-on-surface); }
+
+/* ─── Display preview ───────────────────────────────────────────── */
+.display-preview-img {
+  width: 100%; aspect-ratio: 4/3;
+  object-fit: contain; background: #1C1B1F;
+  border-radius: var(--shape-sm); display: block;
+}
+.display-empty {
+  width: 100%; aspect-ratio: 4/3;
+  background: var(--md-surface-container);
+  border-radius: var(--shape-sm);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  color: var(--md-on-surface-variant); font-size: 13px;
+}
+.display-empty svg { width: 40px; height: 40px; opacity: .4; }
+
+/* ─── Snackbar ──────────────────────────────────────────────────── */
+.snackbar {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(calc(100% + 32px));
+  background: var(--md-inverse-surface); color: var(--md-inverse-on-surface);
+  padding: 14px 16px; border-radius: var(--shape-xs);
+  font-size: 14px; line-height: 1.43;
+  min-width: 280px; max-width: calc(100vw - 32px);
+  box-shadow: var(--elev-3);
+  transition: transform .3s cubic-bezier(.2,0,0,1);
+  z-index: 300;
+  display: flex; align-items: center; gap: 8px;
+}
+.snackbar.show { transform: translateX(-50%) translateY(0); }
+.snackbar-msg  { flex: 1; }
+.snackbar-action {
+  background: transparent; border: none;
+  color: var(--md-inverse-primary); font-size: 14px; font-weight: 500;
+  cursor: pointer; padding: 4px 0; flex-shrink: 0;
+}
+.snackbar.error .snackbar-msg::before {
+  content: '⚠ '; color: #F2B8B5;
+}
+
+/* ─── Misc ──────────────────────────────────────────────────────── */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>E-Paper Display</h1>
-    <p>4.2&quot; 400×300 Monochrome</p>
-  </header>
 
-  <!-- Current display state -->
-  <div class="current-display">
-    <h2>Current Display</h2>
-    <div class="display-preview">
-      <div class="no-image" id="noImage">No image yet</div>
-      <img id="currentPreview" style="display:none" alt="Current display content">
-      <div class="display-meta" id="displayMeta">
-        <div><span>Version: </span><strong id="metaVersion">—</strong></div>
-        <div><span>Updated: </span><strong id="metaTime">—</strong></div>
-      </div>
-    </div>
+<!-- ── Top App Bar ──────────────────────────────────────────────── -->
+<header class="top-app-bar">
+  <svg class="app-bar-leading" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M21 3H3C2 3 1 4 1 5v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7l-3 3.72L11 13l-3 4h8z"/>
+  </svg>
+  <div class="app-bar-titles">
+    <div class="app-bar-title">E-Paper Display</div>
+    <div class="app-bar-sub">4.2&Prime; · 400×300 · Monochrome</div>
   </div>
+  <button class="icon-btn" id="btnRefresh" title="Refresh status" aria-label="Refresh status">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+    </svg>
+  </button>
+</header>
 
-  <!-- Status bar -->
-  <div class="status-bar">
-    <div class="status-text" id="statusText">Ready — select an image to begin</div>
-    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-  </div>
+<!-- ── Progress Bar ─────────────────────────────────────────────── -->
+<div class="progress-track" id="progressBar" role="progressbar" aria-hidden="true">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
 
-  <!-- Upload card -->
-  <div class="upload-card">
-    <div class="drop-zone" id="dropZone">
-      <input type="file" id="fileInput" accept="image/*,.heic,.heif" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <p>Tap to select image<br><span class="hint">or drag &amp; drop</span></p>
-    </div>
+<!-- ── Page ─────────────────────────────────────────────────────── -->
+<main class="page">
+  <div class="layout">
 
-    <div class="preview-section" id="previewSection">
-      <div class="canvas-row">
-        <div>
-          <div class="preview-label">Source (drag to crop)</div>
-          <div class="canvas-wrapper" id="canvasWrapper">
-            <canvas id="sourceCanvas"></canvas>
-            <div class="crop-overlay" id="cropOverlay">
-              <div class="handle tl" data-handle="tl"></div>
-              <div class="handle tr" data-handle="tr"></div>
-              <div class="handle bl" data-handle="bl"></div>
-              <div class="handle br" data-handle="br"></div>
-            </div>
+    <!-- ── Primary Column: Upload ──────────────────────────────── -->
+    <div class="main-col">
+      <div class="card-elevated" id="uploadCard">
+        <div class="card-header">
+          <div class="card-header-text">
+            <div class="card-title">Upload Image</div>
+            <div class="card-subtitle">Cropped, dithered, and sent to the display</div>
           </div>
         </div>
-        <div>
-          <div class="preview-label">Preview (dithered)</div>
-          <canvas id="previewCanvas" width="200" height="150"></canvas>
+        <div class="card-body">
+          <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Select image file">
+            <input type="file" id="fileInput" accept="image/*,.heic,.heif" hidden>
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+            <div class="drop-zone-primary">Drop image here or tap to browse</div>
+            <div class="drop-zone-hint">JPEG · PNG · WebP · HEIC</div>
+          </div>
+        </div>
+
+        <!-- Preview — shown after file loads -->
+        <div id="previewSection" style="display:none">
+          <div class="divider"></div>
+          <div class="preview-content">
+            <div class="section-label">Crop &amp; Preview</div>
+            <div class="canvas-row">
+              <div class="canvas-col">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                  <canvas id="sourceCanvas"></canvas>
+                  <div class="crop-overlay" id="cropOverlay">
+                    <div class="handle tl" data-handle="tl"></div>
+                    <div class="handle tr" data-handle="tr"></div>
+                    <div class="handle bl" data-handle="bl"></div>
+                    <div class="handle br" data-handle="br"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="canvas-col">
+                <div class="section-label" style="margin-top:0">Dithered</div>
+                <canvas id="previewCanvas" width="200" height="150"></canvas>
+              </div>
+            </div>
+
+            <div class="section-label">Adjustments</div>
+            <div class="slider-group">
+              <label class="slider-label" for="brightness">Brightness</label>
+              <input type="range" id="brightness" min="-100" max="100" value="0">
+              <span class="slider-value" id="brightnessVal">0</span>
+            </div>
+            <div class="slider-group">
+              <label class="slider-label" for="contrast">Contrast</label>
+              <input type="range" id="contrast" min="-100" max="100" value="0">
+              <span class="slider-value" id="contrastVal">0</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="action-bar">
+            <button class="btn btn-text" id="btnReset">Reset</button>
+            <button class="btn btn-filled" id="btnSend">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              Send to Display
+            </button>
+          </div>
+        </div>
+      </div><!-- /uploadCard -->
+    </div><!-- /main-col -->
+
+    <!-- ── Sidebar ────────────────────────────────────────────── -->
+    <div class="sidebar">
+
+      <!-- Current display state -->
+      <div class="card-elevated">
+        <div class="card-header">
+          <div class="card-header-text">
+            <div class="card-title">Current Display</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="display-empty" id="noImage">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 3H3C2 3 1 4 1 5v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7l-3 3.72L11 13l-3 4h8z"/>
+            </svg>
+            No content yet
+          </div>
+          <img id="currentPreview" class="display-preview-img" style="display:none" alt="Current display content">
+          <div class="chip-row">
+            <div class="chip"><span class="chip-key">Ver</span><span class="chip-val" id="metaVersion">—</span></div>
+            <div class="chip"><span class="chip-key">Updated</span><span class="chip-val" id="metaTime">—</span></div>
+          </div>
         </div>
       </div>
 
-      <div class="controls">
-        <div class="control-group">
-          <label>Brightness</label>
-          <input type="range" id="brightness" min="-100" max="100" value="0">
-          <span id="brightnessVal">0</span>
-        </div>
-        <div class="control-group">
-          <label>Contrast</label>
-          <input type="range" id="contrast" min="-100" max="100" value="0">
-          <span id="contrastVal">0</span>
+      <!-- Actions -->
+      <div class="card" style="margin-top:12px">
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-tonal btn-block" id="btnClear">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/>
+            </svg>
+            Clear Display
+          </button>
+          <p style="font-size:12px;color:var(--md-on-surface-variant);text-align:center;line-height:1.5">
+            ESP32 polls every 60&nbsp;s — display updates on next check
+          </p>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn btn-secondary" id="btnReset">Reset</button>
-        <button class="btn btn-primary" id="btnSend">Send to Display</button>
-      </div>
-    </div>
-  </div>
+    </div><!-- /sidebar -->
+  </div><!-- /layout -->
+</main>
 
-  <!-- Tools -->
-  <div class="tools">
-    <button class="btn btn-secondary btn-small" id="btnClear">Clear Display</button>
-    <button class="btn btn-secondary btn-small" id="btnRefresh">Refresh Status</button>
-  </div>
-
-  <footer>
-    <p>ESP32 polls <code>/api/content/version</code> every 60 s and fetches <code>/api/content/image</code> on change</p>
-  </footer>
+<!-- ── Snackbar ──────────────────────────────────────────────────── -->
+<div class="snackbar" id="snackbar" role="status" aria-live="polite">
+  <span class="snackbar-msg" id="snackbarMsg"></span>
 </div>
 
 <script>
 (function () {
 'use strict';
 
-const DISPLAY_WIDTH = 400;
-const DISPLAY_HEIGHT = 300;
-const ASPECT_RATIO = DISPLAY_WIDTH / DISPLAY_HEIGHT;
+const DISPLAY_W = 400, DISPLAY_H = 300;
+const ASPECT    = DISPLAY_W / DISPLAY_H;
 
-const $ = s => document.querySelector(s);
-const dropZone      = $('#dropZone');
-const fileInput     = $('#fileInput');
-const previewSection = $('#previewSection');
-const sourceCanvas  = $('#sourceCanvas');
-const previewCanvas = $('#previewCanvas');
-const cropOverlay   = $('#cropOverlay');
-const canvasWrapper = $('#canvasWrapper');
-const brightnessSlider = $('#brightness');
-const contrastSlider   = $('#contrast');
-const brightnessVal    = $('#brightnessVal');
-const contrastVal      = $('#contrastVal');
-const btnSend   = $('#btnSend');
-const btnReset  = $('#btnReset');
-const btnClear  = $('#btnClear');
+const $  = s => document.querySelector(s);
+const dropZone   = $('#dropZone');
+const fileInput  = $('#fileInput');
+const prevSec    = $('#previewSection');
+const srcCanvas  = $('#sourceCanvas');
+const prvCanvas  = $('#previewCanvas');
+const cropOvl    = $('#cropOverlay');
+const cwrapper   = $('#canvasWrapper');
+const bSlider    = $('#brightness');
+const cSlider    = $('#contrast');
+const bVal       = $('#brightnessVal');
+const cVal       = $('#contrastVal');
+const btnSend    = $('#btnSend');
+const btnReset   = $('#btnReset');
+const btnClear   = $('#btnClear');
 const btnRefresh = $('#btnRefresh');
-const statusText  = $('#statusText');
-const progressBar = $('#progressBar');
+const noImage    = $('#noImage');
+const curPrev    = $('#currentPreview');
+const metaVer    = $('#metaVersion');
+const metaTime   = $('#metaTime');
+const progressBar  = $('#progressBar');
 const progressFill = $('#progressFill');
-const noImage      = $('#noImage');
-const currentPreview = $('#currentPreview');
-const metaVersion  = $('#metaVersion');
-const metaTime     = $('#metaTime');
+const snackbar   = $('#snackbar');
+const snackMsg   = $('#snackbarMsg');
 
-const sourceCtx  = sourceCanvas.getContext('2d', { willReadFrequently: true });
-const previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
+const srcCtx  = srcCanvas.getContext('2d', { willReadFrequently: true });
+const prvCtx  = prvCanvas.getContext('2d', { willReadFrequently: true });
 
 let originalImage = null;
 let originalFile  = null;
-let cropRect = { x: 0, y: 0, w: DISPLAY_WIDTH, h: DISPLAY_HEIGHT };
-let scale = 1;
-let isDragging = false;
-let dragHandle = null;
-let dragStart = { x: 0, y: 0 };
-let cropStart = { x: 0, y: 0, w: 0, h: 0 };
+let cropRect  = { x: 0, y: 0, w: DISPLAY_W, h: DISPLAY_H };
+let scale     = 1;
+let isDragging = false, dragHandle = null;
+let dragStart  = { x: 0, y: 0 };
+let cropStart  = { x: 0, y: 0, w: 0, h: 0 };
+let snackTimer = null;
 
-// ── Status helpers ───────────────────────────────────────────────
-function setStatus(text) {
-  statusText.textContent = text;
+// ── Snackbar ────────────────────────────────────────────────────
+function toast(msg, isError = false, durationMs = 4000) {
+  snackMsg.textContent = msg;
+  snackbar.classList.toggle('error', isError);
+  snackbar.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => snackbar.classList.remove('show'), durationMs);
 }
+
+// ── Progress ────────────────────────────────────────────────────
 function showProgress(pct) {
-  progressBar.style.display = 'block';
+  progressBar.classList.add('visible');
   progressFill.style.width = pct + '%';
 }
 function hideProgress() {
-  progressBar.style.display = 'none';
-  progressFill.style.width = '0%';
+  progressFill.style.width = '100%';
+  setTimeout(() => {
+    progressBar.classList.remove('visible');
+    progressFill.style.width = '0%';
+  }, 300);
 }
+
+// ── Slider track fill ────────────────────────────────────────────
+function updateSliderTrack(input) {
+  const min = +input.min, max = +input.max, val = +input.value;
+  const pct = ((val - min) / (max - min)) * 100;
+  const primary = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--md-primary').trim();
+  const muted   = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--md-surface-variant').trim();
+  input.style.setProperty('--track-fill', `${pct}%`);
+  // Works in Chrome/Edge/Safari; Firefox uses ::-moz-range-progress natively
+  try {
+    input.style.backgroundImage =
+      `linear-gradient(to right, ${primary} ${pct}%, ${muted} ${pct}%)`;
+  } catch (_) {}
+}
+[bSlider, cSlider].forEach(s => updateSliderTrack(s));
+
+// ── Status ───────────────────────────────────────────────────────
 function timeAgo(ts) {
   if (!ts) return '—';
-  const diff = Math.floor(Date.now() / 1000) - ts;
-  if (diff < 60)   return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  const d = Math.floor(Date.now() / 1000) - ts;
+  if (d < 60)    return `${d}s ago`;
+  if (d < 3600)  return `${Math.floor(d/60)}m ago`;
+  if (d < 86400) return `${Math.floor(d/3600)}h ago`;
   return new Date(ts * 1000).toLocaleDateString();
 }
 
-// ── Server status ────────────────────────────────────────────────
 async function loadCurrentDisplay() {
   try {
-    const res = await fetch('/api/status');
+    const res  = await fetch('/api/status');
     if (!res.ok) return;
     const data = await res.json();
     const meta = data.content;
-    metaVersion.textContent = meta.version || '—';
+    metaVer.textContent  = meta.version || '—';
     metaTime.textContent = timeAgo(meta.timestamp);
-
     if (meta.version && meta.version !== 'none' && meta.size > 0) {
-      currentPreview.src = `/api/content/preview?t=${meta.timestamp}`;
-      currentPreview.style.display = '';
+      curPrev.src = `/api/content/preview?t=${meta.timestamp}`;
+      curPrev.style.display = '';
       noImage.style.display = 'none';
     }
-  } catch (e) {
-    // server unreachable
-  }
+  } catch (_) {}
 }
 
 // ── File loading ─────────────────────────────────────────────────
 async function handleFile(file) {
   if (!file) return;
   originalFile = file;
-  setStatus('Loading image...');
 
   let loaded = null;
 
@@ -291,7 +617,7 @@ async function handleFile(file) {
       const url = URL.createObjectURL(file);
       const img = new Image();
       await new Promise((ok, fail) => {
-        img.onload  = () => { URL.revokeObjectURL(url); ok(); };
+        img.onload  = () => { URL.revokeObjectURL(url); ok();   };
         img.onerror = () => { URL.revokeObjectURL(url); fail(); };
         img.src = url;
       });
@@ -302,112 +628,108 @@ async function handleFile(file) {
   if (loaded) {
     originalImage = loaded;
     initCropper(loaded);
-    setStatus('Adjust crop area, then click "Send to Display"');
   } else {
-    setStatus('Failed to load image — try JPG or PNG.');
+    toast('Could not load image — try JPEG or PNG.', true);
   }
 }
 
 // ── Cropper ──────────────────────────────────────────────────────
 function initCropper(img) {
-  const maxW = Math.min(canvasWrapper.parentElement.clientWidth || 300, 300);
-  const maxH = 280;
+  const maxW = Math.min(cwrapper.parentElement.clientWidth || 280, 320);
+  const maxH = 320;
   let dw = img.width, dh = img.height;
   if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
   if (dh > maxH) { dw = dw * maxH / dh; dh = maxH; }
 
   scale = img.width / dw;
-  sourceCanvas.width = dw; sourceCanvas.height = dh;
-  sourceCtx.drawImage(img, 0, 0, dw, dh);
+  srcCanvas.width = Math.round(dw);
+  srcCanvas.height = Math.round(dh);
+  srcCtx.drawImage(img, 0, 0, srcCanvas.width, srcCanvas.height);
 
-  const cw = Math.min(dw, dh * ASPECT_RATIO);
-  const ch = cw / ASPECT_RATIO;
+  const cw = Math.min(dw, dh * ASPECT);
+  const ch = cw / ASPECT;
   cropRect = { x: (dw - cw) / 2, y: (dh - ch) / 2, w: cw, h: ch };
 
-  updateCropOverlay();
+  applyCropOverlay();
   updatePreview();
-  previewSection.style.display = 'block';
+  prevSec.style.display = '';
 }
 
-function updateCropOverlay() {
-  cropOverlay.style.left   = cropRect.x + 'px';
-  cropOverlay.style.top    = cropRect.y + 'px';
-  cropOverlay.style.width  = cropRect.w + 'px';
-  cropOverlay.style.height = cropRect.h + 'px';
+function applyCropOverlay() {
+  cropOvl.style.left   = cropRect.x + 'px';
+  cropOvl.style.top    = cropRect.y + 'px';
+  cropOvl.style.width  = cropRect.w + 'px';
+  cropOvl.style.height = cropRect.h + 'px';
 }
 
-function getEventPos(e) {
-  const rect = canvasWrapper.getBoundingClientRect();
+function evPos(e) {
+  const r = cwrapper.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
-  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
 }
-function startDrag(e) {
+function onDragStart(e) {
   e.preventDefault();
   isDragging = true;
-  dragStart = getEventPos(e);
-  cropStart = { ...cropRect };
-  const tgt = e.target;
-  if (tgt.classList.contains('handle')) dragHandle = tgt.dataset.handle;
-  else dragHandle = 'move';
+  dragStart  = evPos(e);
+  cropStart  = { ...cropRect };
+  dragHandle = e.target.dataset.handle || 'move';
 }
-function doDrag(e) {
+function onDragMove(e) {
   if (!isDragging || !originalImage) return;
   e.preventDefault();
-  const pos = getEventPos(e);
+  const pos = evPos(e);
   const dx = pos.x - dragStart.x, dy = pos.y - dragStart.y;
-  const cW = sourceCanvas.width, cH = sourceCanvas.height;
+  const cW = srcCanvas.width, cH = srcCanvas.height;
 
   if (dragHandle === 'move') {
     cropRect.x = Math.max(0, Math.min(cW - cropRect.w, cropStart.x + dx));
     cropRect.y = Math.max(0, Math.min(cH - cropRect.h, cropStart.y + dy));
   } else {
     let { x, y, w, h } = cropStart;
-    if (dragHandle.includes('l')) { w = Math.max(50, cropStart.w - dx); x = cropStart.x + cropStart.w - w; }
-    if (dragHandle.includes('r')) { w = Math.max(50, cropStart.w + dx); }
-    if (dragHandle.includes('t')) { h = Math.max(50, cropStart.h - dy); y = cropStart.y + cropStart.h - h; }
-    if (dragHandle.includes('b')) { h = Math.max(50, cropStart.h + dy); }
-    if (w / h > ASPECT_RATIO) w = h * ASPECT_RATIO; else h = w / ASPECT_RATIO;
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x + w > cW) { w = cW - x; h = w / ASPECT_RATIO; }
-    if (y + h > cH) { h = cH - y; w = h * ASPECT_RATIO; }
+    if (dragHandle.includes('l')) { w = Math.max(40, cropStart.w - dx); x = cropStart.x + cropStart.w - w; }
+    if (dragHandle.includes('r')) { w = Math.max(40, cropStart.w + dx); }
+    if (dragHandle.includes('t')) { h = Math.max(40, cropStart.h - dy); y = cropStart.y + cropStart.h - h; }
+    if (dragHandle.includes('b')) { h = Math.max(40, cropStart.h + dy); }
+    if (w / h > ASPECT) w = h * ASPECT; else h = w / ASPECT;
+    x = Math.max(0, x); y = Math.max(0, y);
+    if (x + w > cW) { w = cW - x; h = w / ASPECT; }
+    if (y + h > cH) { h = cH - y; w = h * ASPECT; }
     cropRect = { x, y, w, h };
   }
-  updateCropOverlay();
+  applyCropOverlay();
   updatePreview();
 }
-function endDrag() { isDragging = false; dragHandle = null; }
+function onDragEnd() { isDragging = false; dragHandle = null; }
 
-// ── Dithering preview (client-side, for instant feedback) ────────
-function applyDithering(canvas) {
+// ── Dithering preview ────────────────────────────────────────────
+function applyDither(canvas) {
   const ctx = canvas.getContext('2d');
-  const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const id  = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const d = id.data, w = canvas.width, h = canvas.height;
-  const bright = parseInt(brightnessSlider.value);
-  const cont   = parseInt(contrastSlider.value);
+  const bright = +bSlider.value;
+  const cont   = +cSlider.value;
   const cf = (259 * (cont + 255)) / (255 * (259 - cont));
 
   const gray = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
-    let g = 0.299 * d[i*4] + 0.587 * d[i*4+1] + 0.114 * d[i*4+2];
+    let g = 0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2];
     g += bright * 2.55;
-    g = cf * (g - 128) + 128;
+    g  = cf * (g - 128) + 128;
     gray[i] = Math.max(0, Math.min(255, g));
   }
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const idx = y * w + x;
-      const old = gray[idx], nw = old < 128 ? 0 : 255, err = old - nw;
+      const idx = y*w+x, old = gray[idx], nw = old < 128 ? 0 : 255, err = old - nw;
       gray[idx] = nw;
-      if (x+1 < w)           gray[idx+1]       += err * 7/16;
+      if (x+1 < w)           gray[idx+1]       += err*7/16;
       if (y+1 < h) {
-        if (x > 0)            gray[(y+1)*w+x-1] += err * 3/16;
-                              gray[(y+1)*w+x]   += err * 5/16;
-        if (x+1 < w)          gray[(y+1)*w+x+1] += err * 1/16;
+        if (x > 0)            gray[(y+1)*w+x-1] += err*3/16;
+                              gray[(y+1)*w+x]   += err*5/16;
+        if (x+1 < w)          gray[(y+1)*w+x+1] += err*1/16;
       }
     }
   }
-  for (let i = 0; i < w * h; i++) {
+  for (let i = 0; i < w*h; i++) {
     const v = gray[i] < 128 ? 0 : 255;
     d[i*4] = d[i*4+1] = d[i*4+2] = v; d[i*4+3] = 255;
   }
@@ -418,58 +740,56 @@ function updatePreview() {
   if (!originalImage) return;
   const sx = Math.round(cropRect.x * scale), sy = Math.round(cropRect.y * scale);
   const sw = Math.round(cropRect.w * scale), sh = Math.round(cropRect.h * scale);
-  // Preview canvas is half resolution (200×150) for display speed
-  previewCanvas.width = 200; previewCanvas.height = 150;
-  previewCtx.fillStyle = 'white';
-  previewCtx.fillRect(0, 0, 200, 150);
-  try { previewCtx.drawImage(originalImage, sx, sy, sw, sh, 0, 0, 200, 150); } catch (_) { return; }
-  applyDithering(previewCanvas);
+  prvCanvas.width = 200; prvCanvas.height = 150;
+  prvCtx.fillStyle = 'white';
+  prvCtx.fillRect(0, 0, 200, 150);
+  try { prvCtx.drawImage(originalImage, sx, sy, sw, sh, 0, 0, 200, 150); } catch (_) { return; }
+  applyDither(prvCanvas);
 }
 
-// ── Send to server ───────────────────────────────────────────────
+// ── Send to server ────────────────────────────────────────────────
 async function sendImage() {
-  if (!originalFile) { setStatus('No image loaded'); return; }
+  if (!originalFile) { toast('No image loaded', true); return; }
   btnSend.disabled = true;
-  setStatus('Uploading to server...');
   showProgress(10);
 
   try {
-    const srcX = Math.round(cropRect.x * scale);
-    const srcY = Math.round(cropRect.y * scale);
-    const srcW = Math.round(cropRect.w * scale);
-    const srcH = Math.round(cropRect.h * scale);
+    const srcX = Math.round(cropRect.x * scale), srcY = Math.round(cropRect.y * scale);
+    const srcW = Math.round(cropRect.w * scale), srcH = Math.round(cropRect.h * scale);
 
     const form = new FormData();
-    form.append('file', originalFile);
-    form.append('crop_x', srcX);
-    form.append('crop_y', srcY);
-    form.append('crop_w', srcW);
-    form.append('crop_h', srcH);
-    form.append('brightness', brightnessSlider.value);
-    form.append('contrast', contrastSlider.value);
+    form.append('file',      originalFile);
+    form.append('crop_x',    srcX);
+    form.append('crop_y',    srcY);
+    form.append('crop_w',    srcW);
+    form.append('crop_h',    srcH);
+    form.append('brightness', bSlider.value);
+    form.append('contrast',   cSlider.value);
 
     showProgress(40);
-    const res = await fetch('/api/upload', { method: 'POST', body: form });
-    showProgress(90);
+    const res  = await fetch('/api/upload', { method: 'POST', body: form });
+    showProgress(85);
     const data = await res.json();
 
     if (res.ok) {
-      showProgress(100);
-      setStatus(`Uploaded! Version ${data.version} — display refreshes within the poll interval.`);
+      hideProgress();
+      toast(`Sent! Version ${data.version} — display refreshes within 60 s`);
       await loadCurrentDisplay();
     } else {
-      setStatus('Error: ' + (data.error || 'upload failed'));
+      hideProgress();
+      toast(data.error || 'Upload failed', true);
     }
   } catch (e) {
-    setStatus('Error: ' + e.message);
+    hideProgress();
+    toast('Network error: ' + e.message, true);
   } finally {
     btnSend.disabled = false;
-    setTimeout(hideProgress, 1200);
   }
 }
 
-// ── Event wiring ─────────────────────────────────────────────────
+// ── Event wiring ──────────────────────────────────────────────────
 dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -478,38 +798,41 @@ dropZone.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
-cropOverlay.addEventListener('mousedown', startDrag);
-document.addEventListener('mousemove', doDrag);
-document.addEventListener('mouseup', endDrag);
-cropOverlay.addEventListener('touchstart', startDrag, { passive: false });
-document.addEventListener('touchmove', doDrag, { passive: false });
-document.addEventListener('touchend', endDrag);
-cropOverlay.querySelectorAll('.handle').forEach(h => {
-  h.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e); });
-  h.addEventListener('touchstart', e => { e.stopPropagation(); startDrag(e); }, { passive: false });
+cropOvl.addEventListener('mousedown', onDragStart);
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('mouseup', onDragEnd);
+cropOvl.addEventListener('touchstart', onDragStart, { passive: false });
+document.addEventListener('touchmove', onDragMove,  { passive: false });
+document.addEventListener('touchend', onDragEnd);
+cropOvl.querySelectorAll('.handle').forEach(h => {
+  h.addEventListener('mousedown', e => { e.stopPropagation(); onDragStart(e); });
+  h.addEventListener('touchstart', e => { e.stopPropagation(); onDragStart(e); }, { passive: false });
 });
 
-brightnessSlider.addEventListener('input', () => { brightnessVal.textContent = brightnessSlider.value; updatePreview(); });
-contrastSlider.addEventListener('input',   () => { contrastVal.textContent   = contrastSlider.value;   updatePreview(); });
+bSlider.addEventListener('input', () => { bVal.textContent = bSlider.value; updateSliderTrack(bSlider); updatePreview(); });
+cSlider.addEventListener('input', () => { cVal.textContent = cSlider.value; updateSliderTrack(cSlider); updatePreview(); });
 
 btnSend.addEventListener('click', sendImage);
 btnReset.addEventListener('click', () => {
-  brightnessSlider.value = contrastSlider.value = 0;
-  brightnessVal.textContent = contrastVal.textContent = '0';
+  bSlider.value = cSlider.value = 0;
+  bVal.textContent = cVal.textContent = '0';
+  [bSlider, cSlider].forEach(updateSliderTrack);
   if (originalImage) initCropper(originalImage);
 });
 btnClear.addEventListener('click', async () => {
-  setStatus('Sending clear command...');
   try {
     const res = await fetch('/api/clear', { method: 'POST' });
-    const d = await res.json();
-    setStatus(d.message || 'Cleared');
+    const d   = await res.json();
+    toast(d.message || 'Display will clear on next poll');
     await loadCurrentDisplay();
-  } catch (e) { setStatus('Error: ' + e.message); }
+  } catch (e) { toast('Error: ' + e.message, true); }
 });
-btnRefresh.addEventListener('click', () => { loadCurrentDisplay(); setStatus('Status refreshed'); });
+btnRefresh.addEventListener('click', async () => {
+  await loadCurrentDisplay();
+  toast('Status refreshed');
+});
 
-// ── Init ─────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────
 loadCurrentDisplay();
 
 })();
