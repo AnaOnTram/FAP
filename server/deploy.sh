@@ -15,8 +15,11 @@ apt-get update -qq
 apt-get install -y python3 python3-pip python3-venv nginx
 
 # Copy app files to /opt
+SRC="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$APP_DIR"
-cp -r "$(dirname "$0")"/{app.py,requirements.txt,static} "$APP_DIR/"
+cp "$SRC/app.py" "$APP_DIR/"
+cp "$SRC/requirements.txt" "$APP_DIR/"
+cp -r "$SRC/static" "$APP_DIR/"
 mkdir -p "$APP_DIR/data"
 chown -R www-data:www-data "$APP_DIR/data"
 
