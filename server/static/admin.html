@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Paper Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&family=Roboto+Flex:opsz,wdth,wght,GRAD@8..144,75..125,300..800,-200..150&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#355CA8;--on-primary:#fff;--primary-container:#D7E3FF;--secondary-container:#DAE2F9;--tertiary-container:#FAD8FD;--surface:#F8F9FF;--surface-high:#E7E8F0;--surface-lowest:#fff;--text:#191C20;--muted:#44474F;--outline:#C4C6D0;--error:#BA1A1A;--error-container:#FFDAD6;--elev:0 2px 6px 2px rgba(25,28,32,.12),0 1px 2px rgba(25,28,32,.16);--spring:cubic-bezier(.34,1.56,.64,1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Roboto Flex',system-ui,sans-serif;color:var(--text);background:radial-gradient(circle at 16% 10%,rgba(215,227,255,.95),transparent 34rem),radial-gradient(circle at 92% 18%,rgba(250,216,253,.72),transparent 30rem),var(--surface)}
+button,input,select{font:inherit}
+.material-symbols-rounded{font-family:'Material Symbols Rounded';font-feature-settings:'liga';font-size:22px}
+.bar{position:sticky;top:0;z-index:10;min-height:76px;padding:12px max(16px,calc((100vw - 1160px)/2 + 16px));display:flex;align-items:center;gap:12px;background:color-mix(in srgb,var(--surface-high) 82%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid color-mix(in srgb,var(--outline) 72%,transparent)}
+.brand{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;color:#001B3F;background:linear-gradient(135deg,var(--primary-container),var(--tertiary-container));box-shadow:var(--elev)}
+.title{flex:1}.title h1{font-size:28px;line-height:1;font-variation-settings:"opsz" 28,"wdth" 108,"wght" 760,"GRAD" 0}.title p{margin-top:4px;color:var(--muted);font-size:13px}
+.page{width:min(100%,1160px);margin:0 auto;padding:24px 16px 48px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px}
+.card{border-radius:28px;background:color-mix(in srgb,var(--surface-lowest) 76%,var(--primary-container));border:1px solid color-mix(in srgb,var(--outline) 72%,white);box-shadow:var(--elev);overflow:hidden;animation:arrive .65s var(--spring) both}
+.head{padding:22px 22px 0}.head h2{font-size:20px;font-variation-settings:"opsz" 20,"wdth" 106,"wght" 720,"GRAD" 0}.head p{margin-top:5px;color:var(--muted);font-size:13px;line-height:1.45}
+.body{padding:20px 22px 22px;display:grid;gap:12px}
+.field{display:grid;gap:7px}.field label{font-size:13px;color:var(--muted);font-variation-settings:"opsz" 13,"wdth" 104,"wght" 650,"GRAD" 0}
+input,select{width:100%;min-height:48px;border:1px solid color-mix(in srgb,var(--outline) 76%,white);border-radius:18px;background:var(--surface-lowest);padding:0 14px;color:var(--text);transition:border-radius .45s var(--spring),border-color .2s}
+input:focus,select:focus{outline:3px solid rgba(53,92,168,.3);outline-offset:3px;border-color:var(--primary);border-radius:14px 24px 14px 24px}
+.btn{min-height:46px;border:0;border-radius:18px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-variation-settings:"opsz" 14,"wdth" 104,"wght" 690,"GRAD" 0;transition:transform .45s var(--spring),border-radius .45s var(--spring),box-shadow .2s}
+.btn:hover{transform:translateY(-1px);border-radius:24px 14px 24px 14px}.btn:active{transform:scale(.96)}
+.filled{background:var(--primary);color:var(--on-primary);box-shadow:var(--elev)}.tonal{background:var(--secondary-container);color:#131C2B}.danger{background:var(--error-container);color:#410002}.text{background:transparent;color:var(--primary)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.user-list{display:grid;gap:10px}.user{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border-radius:22px;background:color-mix(in srgb,var(--surface-high) 70%,white);border:1px solid color-mix(in srgb,var(--outline) 66%,white);padding:14px}
+.name{font-size:16px;font-variation-settings:"opsz" 16,"wdth" 104,"wght" 720,"GRAD" 0}.meta{margin-top:4px;color:var(--muted);font-size:12px;display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;min-height:28px;border-radius:999px;padding:0 10px;background:var(--surface-lowest);border:1px solid color-mix(in srgb,var(--outline) 72%,white);font-size:12px}
+.pending{background:#FFF4CF;color:#4E3B00}.active{background:#D9F7BE;color:#103B12}.rejected{background:var(--error-container);color:#410002}.admin{background:var(--tertiary-container);color:#28132E}
+.msg{display:none;border-radius:18px;background:var(--primary-container);padding:12px 14px;color:#001B3F;font-size:13px;line-height:1.4}.msg.show{display:block}.msg.error{background:var(--error-container);color:#410002}
+@keyframes arrive{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:860px){.page{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.user{grid-template-columns:1fr}.bar{align-items:flex-start}.title h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand" aria-hidden="true"><span class="material-symbols-rounded">admin_panel_settings</span></div>
+  <div class="title">
+    <h1>Admin Panel</h1>
+    <p>User approval, account creation, and registration defaults</p>
+  </div>
+  <button class="btn tonal" id="portal"><span class="material-symbols-rounded" aria-hidden="true">dashboard</span> Portal</button>
+  <button class="btn text" id="logout"><span class="material-symbols-rounded" aria-hidden="true">logout</span> Logout</button>
+</header>
+
+<main class="page">
+  <section class="card">
+    <div class="head">
+      <h2>Users</h2>
+      <p>Approve pending registrations, reject requests, or remove accounts.</p>
+    </div>
+    <div class="body">
+      <div class="user-list" id="users"></div>
+    </div>
+  </section>
+
+  <aside style="display:grid;gap:20px;align-content:start">
+    <section class="card">
+      <div class="head">
+        <h2>Create User</h2>
+        <p>Admin-created users are active immediately.</p>
+      </div>
+      <div class="body">
+        <div class="field"><label for="newUsername">Username</label><input id="newUsername" placeholder="operator"></div>
+        <div class="field"><label for="newPassword">Password</label><input id="newPassword" type="password" placeholder="8+ characters"></div>
+        <div class="field"><label for="newRole">Role</label><select id="newRole"><option value="user">User</option><option value="admin">Admin</option></select></div>
+        <button class="btn filled" id="createUser"><span class="material-symbols-rounded" aria-hidden="true">person_add</span> Create User</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head">
+        <h2>Registration Default</h2>
+        <p>Choose what happens when users self-register from the login page.</p>
+      </div>
+      <div class="body">
+        <div class="field">
+          <label for="registrationPolicy">Default behavior</label>
+          <select id="registrationPolicy">
+            <option value="pending">Pending approval</option>
+            <option value="approved">Grant immediately</option>
+          </select>
+        </div>
+        <button class="btn filled" id="saveSettings"><span class="material-symbols-rounded" aria-hidden="true">save</span> Save Setting</button>
+      </div>
+    </section>
+    <div class="msg" id="msg"></div>
+  </aside>
+</main>
+
+<script>
+(function(){
+'use strict';
+const usersEl=document.querySelector('#users');
+const msg=document.querySelector('#msg');
+const registrationPolicy=document.querySelector('#registrationPolicy');
+const newUsername=document.querySelector('#newUsername');
+const newPassword=document.querySelector('#newPassword');
+const newRole=document.querySelector('#newRole');
+let currentUser=null;
+function show(text,error=false){msg.textContent=text;msg.className='msg show'+(error?' error':'');}
+async function api(path,options={}){
+  const res=await fetch(path,options);
+  let data={};
+  try{data=await res.json();}catch(_){}
+  if(!res.ok) throw new Error(data.error||'Request failed');
+  return data;
+}
+function userCard(user){
+  const item=document.createElement('div');
+  item.className='user';
+  const info=document.createElement('div');
+  info.innerHTML=`<div class="name"></div><div class="meta"></div>`;
+  info.querySelector('.name').textContent=user.username;
+  const meta=info.querySelector('.meta');
+  meta.innerHTML=`<span class="pill ${user.role}">${user.role}</span><span class="pill ${user.status}">${user.status}</span>${user.must_reset_password?'<span class="pill pending">reset required</span>':''}`;
+  const actions=document.createElement('div');
+  actions.className='row-actions';
+  if(user.status==='pending'){
+    actions.append(button('Approve','check','tonal',()=>setStatus(user.id,'active')));
+    actions.append(button('Reject','close','danger',()=>setStatus(user.id,'rejected')));
+  } else if(user.status==='rejected'){
+    actions.append(button('Approve','check','tonal',()=>setStatus(user.id,'active')));
+  }
+  if(user.id!==currentUser.id){
+    actions.append(button('Delete','delete','danger',()=>deleteUser(user.id,user.username)));
+  }
+  item.append(info,actions);
+  return item;
+}
+function button(label,icon,cls,handler){
+  const btn=document.createElement('button');
+  btn.className='btn '+cls;
+  btn.innerHTML=`<span class="material-symbols-rounded" aria-hidden="true">${icon}</span> ${label}`;
+  btn.addEventListener('click',handler);
+  return btn;
+}
+async function load(){
+  try{
+    const data=await api('/api/admin/overview');
+    currentUser=data.current_user;
+    registrationPolicy.value=data.settings.registration_policy;
+    usersEl.replaceChildren(...data.users.map(userCard));
+  }catch(e){
+    if(e.message.includes('Login')) window.location.href='/login';
+    else show(e.message,true);
+  }
+}
+async function setStatus(id,status){
+  try{await api(`/api/admin/users/${id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});show('User updated.');load();}catch(e){show(e.message,true);}
+}
+async function deleteUser(id,name){
+  if(!confirm(`Delete ${name}?`)) return;
+  try{await api(`/api/admin/users/${id}`,{method:'DELETE'});show('User deleted.');load();}catch(e){show(e.message,true);}
+}
+document.querySelector('#createUser').addEventListener('click',async()=>{
+  try{
+    await api('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:newUsername.value,password:newPassword.value,role:newRole.value})});
+    newUsername.value='';newPassword.value='';newRole.value='user';show('User created.');load();
+  }catch(e){show(e.message,true);}
+});
+document.querySelector('#saveSettings').addEventListener('click',async()=>{
+  try{await api('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registration_policy:registrationPolicy.value})});show('Registration default saved.');}catch(e){show(e.message,true);}
+});
+document.querySelector('#portal').addEventListener('click',()=>{window.location.href='/';});
+document.querySelector('#logout').addEventListener('click',async()=>{await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';});
+load();
+})();
+</script>
+</body>
+</html>

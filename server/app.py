@@ -4,7 +4,7 @@ E-Paper Display Server
 Serves web GUI for image upload and REST API for ESP32 polling.
 """
 
-from flask import Flask, request, jsonify, send_from_directory, send_file, session
+from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, url_for
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from functools import wraps
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -23,9 +23,10 @@ import sqlite3
 import secrets
 import numpy as np
 
-app = Flask(__name__, static_folder='static')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=os.path.join(BASE_DIR, 'static'))
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATA_DIR = os.path.join(BASE_DIR, 'data')
 IMAGE_PATH = os.path.join(DATA_DIR, 'current.bin')
 META_PATH = os.path.join(DATA_DIR, 'meta.json')
 PREVIEW_PATH = os.path.join(DATA_DIR, 'preview.png')
@@ -39,6 +40,10 @@ MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB after browser-side compression
 USERNAME_MIN = 3
 USERNAME_MAX = 32
 PASSWORD_MIN = 8
+DEFAULT_ADMIN_USERNAME = 'admin'
+DEFAULT_ADMIN_PASSWORD = 'admin'
+REGISTRATION_PENDING = 'pending'
+REGISTRATION_APPROVED = 'approved'
 
 
 def load_secret_key():
@@ -64,6 +69,17 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=os.environ.get('EPAPER_COOKIE_SECURE', '').lower() in ('1', 'true', 'yes'),
 )
+
+
+@app.before_request
+def gate_static_portal():
+    user = current_user()
+    if request.path == '/static/index.html' and not user:
+        return redirect(url_for('login_page'))
+    if request.path == '/static/index.html' and user and user['must_reset_password']:
+        return redirect(url_for('reset_password_page'))
+    if request.path in ('/static/admin.html', '/static/reset-password.html'):
+        return redirect(url_for('index'))
 
 
 def load_meta():
@@ -102,10 +118,48 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE COLLATE NOCASE,
                 password_hash TEXT NOT NULL,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                role TEXT NOT NULL DEFAULT 'user',
+                status TEXT NOT NULL DEFAULT 'active',
+                must_reset_password INTEGER NOT NULL DEFAULT 0
             )
             """
         )
+        cols = {row['name'] for row in conn.execute('PRAGMA table_info(users)').fetchall()}
+        if 'role' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        if 'status' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
+        if 'must_reset_password' not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN must_reset_password INTEGER NOT NULL DEFAULT 0")
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES ('registration_policy', ?)",
+            (REGISTRATION_PENDING,),
+        )
+        admin = conn.execute(
+            'SELECT id FROM users WHERE username = ? COLLATE NOCASE',
+            (DEFAULT_ADMIN_USERNAME,),
+        ).fetchone()
+        if not admin:
+            conn.execute(
+                """
+                INSERT INTO users (username, password_hash, created_at, role, status, must_reset_password)
+                VALUES (?, ?, ?, 'admin', 'active', 1)
+                """,
+                (
+                    DEFAULT_ADMIN_USERNAME,
+                    generate_password_hash(DEFAULT_ADMIN_PASSWORD),
+                    int(time.time()),
+                ),
+            )
 
 
 def clean_username(value):
@@ -123,17 +177,52 @@ def current_user():
         return None
     with db() as conn:
         row = conn.execute(
-            'SELECT id, username, created_at FROM users WHERE id = ?',
+            'SELECT id, username, created_at, role, status, must_reset_password FROM users WHERE id = ?',
             (user_id,),
         ).fetchone()
     return dict(row) if row else None
 
 
+def get_setting(key, default=None):
+    with db() as conn:
+        row = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+    return row['value'] if row else default
+
+
+def set_setting(key, value):
+    with db() as conn:
+        conn.execute(
+            'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+            (key, value),
+        )
+
+
 def require_login(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if not current_user():
+        user = current_user()
+        if not user:
             return jsonify({'error': 'Login required'}), 401
+        if user['status'] != 'active':
+            return jsonify({'error': 'Account is not active'}), 403
+        if user['must_reset_password']:
+            return jsonify({'error': 'Password reset required', 'must_reset_password': True}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def require_admin(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user = current_user()
+        if not user:
+            return jsonify({'error': 'Login required'}), 401
+        if user['status'] != 'active':
+            return jsonify({'error': 'Account is not active'}), 403
+        if user['must_reset_password']:
+            return jsonify({'error': 'Password reset required', 'must_reset_password': True}), 403
+        if user['role'] != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
         return fn(*args, **kwargs)
     return wrapper
 
@@ -295,7 +384,44 @@ def make_text_image(text, username, align='center', font_size=34):
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    user = current_user()
+    if not user:
+        return redirect(url_for('login_page'))
+    if user['must_reset_password']:
+        return redirect(url_for('reset_password_page'))
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.route('/login')
+def login_page():
+    user = current_user()
+    if user and user['must_reset_password']:
+        return redirect(url_for('reset_password_page'))
+    if user:
+        return redirect(url_for('index'))
+    return send_from_directory(app.static_folder, 'login.html')
+
+
+@app.route('/reset-password')
+def reset_password_page():
+    user = current_user()
+    if not user:
+        return redirect(url_for('login_page'))
+    if not user['must_reset_password']:
+        return redirect(url_for('index'))
+    return send_from_directory(app.static_folder, 'reset-password.html')
+
+
+@app.route('/admin')
+def admin_page():
+    user = current_user()
+    if not user:
+        return redirect(url_for('login_page'))
+    if user['must_reset_password']:
+        return redirect(url_for('reset_password_page'))
+    if user['role'] != 'admin':
+        return redirect(url_for('index'))
+    return send_from_directory(app.static_folder, 'admin.html')
 
 
 @app.route('/api/status')
@@ -322,15 +448,29 @@ def api_register():
     if len(password) < PASSWORD_MIN:
         return jsonify({'error': f'Password must be at least {PASSWORD_MIN} characters.'}), 400
 
+    policy = get_setting('registration_policy', REGISTRATION_PENDING)
+    status = 'active' if policy == REGISTRATION_APPROVED else 'pending'
+
     try:
         with db() as conn:
             cur = conn.execute(
-                'INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)',
-                (username, generate_password_hash(password), int(time.time())),
+                """
+                INSERT INTO users (username, password_hash, created_at, role, status, must_reset_password)
+                VALUES (?, ?, ?, 'user', ?, 0)
+                """,
+                (username, generate_password_hash(password), int(time.time()), status),
             )
-            session['user_id'] = cur.lastrowid
+            if status == 'active':
+                session['user_id'] = cur.lastrowid
     except sqlite3.IntegrityError:
         return jsonify({'error': 'That username is already registered.'}), 409
+
+    if status == 'pending':
+        return jsonify({
+            'status': 'pending',
+            'message': 'Registration submitted and awaiting admin approval.',
+            'user': None,
+        }), 202
 
     return jsonify({'status': 'success', 'user': current_user()})
 
@@ -342,12 +482,18 @@ def api_login():
     password = payload.get('password') or ''
     with db() as conn:
         row = conn.execute(
-            'SELECT id, username, password_hash, created_at FROM users WHERE username = ? COLLATE NOCASE',
+            'SELECT id, username, password_hash, created_at, role, status, must_reset_password FROM users WHERE username = ? COLLATE NOCASE',
             (username,),
         ).fetchone()
 
     if not row or not check_password_hash(row['password_hash'], password):
         return jsonify({'error': 'Invalid username or password.'}), 401
+    if row['status'] == 'pending':
+        return jsonify({'error': 'Account is pending admin approval.'}), 403
+    if row['status'] == 'rejected':
+        return jsonify({'error': 'Account registration was rejected.'}), 403
+    if row['status'] != 'active':
+        return jsonify({'error': 'Account is not active.'}), 403
 
     session['user_id'] = row['id']
     return jsonify({'status': 'success', 'user': current_user()})
@@ -362,6 +508,112 @@ def api_logout():
 @app.route('/api/auth/me')
 def api_me():
     return jsonify({'user': current_user()})
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def api_reset_password():
+    user = current_user()
+    if not user:
+        return jsonify({'error': 'Login required'}), 401
+    if user['status'] != 'active':
+        return jsonify({'error': 'Account is not active'}), 403
+    payload = request.get_json(silent=True) or {}
+    password = payload.get('password') or ''
+    if len(password) < PASSWORD_MIN:
+        return jsonify({'error': f'Password must be at least {PASSWORD_MIN} characters.'}), 400
+    if user['username'].lower() == DEFAULT_ADMIN_USERNAME and password == DEFAULT_ADMIN_PASSWORD:
+        return jsonify({'error': 'Choose a password other than the default admin password.'}), 400
+    with db() as conn:
+        conn.execute(
+            'UPDATE users SET password_hash = ?, must_reset_password = 0 WHERE id = ?',
+            (generate_password_hash(password), user['id']),
+        )
+    return jsonify({'status': 'success', 'user': current_user()})
+
+
+@app.route('/api/admin/overview')
+@require_admin
+def api_admin_overview():
+    with db() as conn:
+        rows = conn.execute(
+            'SELECT id, username, created_at, role, status, must_reset_password FROM users ORDER BY role DESC, created_at ASC'
+        ).fetchall()
+    return jsonify({
+        'users': [dict(row) for row in rows],
+        'settings': {
+            'registration_policy': get_setting('registration_policy', REGISTRATION_PENDING),
+        },
+        'current_user': current_user(),
+    })
+
+
+@app.route('/api/admin/users', methods=['POST'])
+@require_admin
+def api_admin_create_user():
+    payload = request.get_json(silent=True) or {}
+    try:
+        username = clean_username(payload.get('username'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    password = payload.get('password') or ''
+    role = payload.get('role') or 'user'
+    if role not in ('user', 'admin'):
+        return jsonify({'error': 'Role must be user or admin.'}), 400
+    if len(password) < PASSWORD_MIN:
+        return jsonify({'error': f'Password must be at least {PASSWORD_MIN} characters.'}), 400
+    try:
+        with db() as conn:
+            conn.execute(
+                """
+                INSERT INTO users (username, password_hash, created_at, role, status, must_reset_password)
+                VALUES (?, ?, ?, ?, 'active', ?)
+                """,
+                (username, generate_password_hash(password), int(time.time()), role, 1 if role == 'admin' else 0),
+            )
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'That username already exists.'}), 409
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/admin/users/<int:user_id>/status', methods=['POST'])
+@require_admin
+def api_admin_set_user_status(user_id):
+    payload = request.get_json(silent=True) or {}
+    status = payload.get('status')
+    if status not in ('active', 'pending', 'rejected'):
+        return jsonify({'error': 'Invalid status.'}), 400
+    if user_id == current_user()['id'] and status != 'active':
+        return jsonify({'error': 'You cannot deactivate your own admin account.'}), 400
+    with db() as conn:
+        row = conn.execute('SELECT id FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not row:
+            return jsonify({'error': 'User not found.'}), 404
+        conn.execute('UPDATE users SET status = ? WHERE id = ?', (status, user_id))
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@require_admin
+def api_admin_delete_user(user_id):
+    if user_id == current_user()['id']:
+        return jsonify({'error': 'You cannot delete your own admin account.'}), 400
+    with db() as conn:
+        row = conn.execute('SELECT id FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not row:
+            return jsonify({'error': 'User not found.'}), 404
+        conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/admin/settings', methods=['POST'])
+@require_admin
+def api_admin_settings():
+    payload = request.get_json(silent=True) or {}
+    policy = payload.get('registration_policy')
+    if policy not in (REGISTRATION_APPROVED, REGISTRATION_PENDING):
+        return jsonify({'error': 'Registration policy must be approved or pending.'}), 400
+    set_setting('registration_policy', policy)
+    return jsonify({'status': 'success', 'settings': {'registration_policy': policy}})
 
 
 @app.route('/api/content/version')

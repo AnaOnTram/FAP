@@ -693,11 +693,6 @@ input[type=range]::-moz-range-thumb {
   background: var(--md-surface-container-lowest);
 }
 .text-field textarea { min-height: 92px; line-height: 1.45; }
-.auth-card {
-  margin-bottom: 18px;
-  display: none;
-}
-.auth-card.visible { display: block; animation: arrive .55s var(--spring-expressive) both; }
 .auth-grid {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
@@ -929,6 +924,9 @@ input[type=range]::-moz-range-thumb {
     <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
     <span class="app-user-name" id="appUserName">Guest</span>
   </div>
+  <button class="icon-btn" id="btnAdmin" title="Admin panel" aria-label="Admin panel" style="display:none">
+    <span class="material-symbols-rounded" aria-hidden="true">admin_panel_settings</span>
+  </button>
   <button class="icon-btn" id="btnRefresh" title="Refresh status" aria-label="Refresh status">
     <span class="material-symbols-rounded" aria-hidden="true">sync</span>
   </button>
@@ -949,37 +947,6 @@ input[type=range]::-moz-range-thumb {
     <div class="live-pill" aria-label="Server online">
       <span class="live-dot" aria-hidden="true"></span>
       <span>Server GUI online</span>
-    </div>
-  </section>
-
-  <section class="card-elevated auth-card" id="authCard" aria-label="Sign in">
-    <div class="card-header">
-      <div class="card-header-text">
-        <div class="card-title">Identity Verification</div>
-        <div class="card-subtitle">Sign in before sending display updates. The final render is stamped with your username.</div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="auth-grid">
-        <div class="text-field">
-          <label for="authUsername">Username</label>
-          <input id="authUsername" autocomplete="username" placeholder="operator">
-        </div>
-        <div class="text-field">
-          <label for="authPassword">Password</label>
-          <input id="authPassword" type="password" autocomplete="current-password" placeholder="8+ characters">
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-filled" id="btnLogin">
-            <span class="material-symbols-rounded" aria-hidden="true">login</span>
-            Login
-          </button>
-          <button class="btn btn-tonal" id="btnRegister">
-            <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
-            Register
-          </button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -1198,13 +1165,9 @@ const btnSend    = $('#btnSend');
 const btnReset   = $('#btnReset');
 const btnClear   = $('#btnClear');
 const btnLogout  = $('#btnLogout');
-const btnLogin   = $('#btnLogin');
-const btnRegister = $('#btnRegister');
 const btnRenderText = $('#btnRenderText');
+const btnAdmin   = $('#btnAdmin');
 const btnRefresh = $('#btnRefresh');
-const authCard   = $('#authCard');
-const authUsername = $('#authUsername');
-const authPassword = $('#authPassword');
 const appUser    = $('#appUser');
 const appUserName = $('#appUserName');
 const modeImage  = $('#modeImage');
@@ -1373,39 +1336,21 @@ function updateSliderTrack(input) {
 
 function setAuthenticated(user) {
   currentUser = user;
-  authCard.classList.toggle('visible', !user);
+  if (!user) {
+    window.location.href = '/login';
+    return;
+  }
+  if (user.must_reset_password) {
+    window.location.href = '/reset-password';
+    return;
+  }
   appUser.classList.toggle('visible', !!user);
   appUserName.textContent = user ? user.username : 'Guest';
   btnLogout.style.display = user ? '' : 'none';
+  btnAdmin.style.display = user && user.role === 'admin' ? '' : 'none';
   [btnSend, btnClear, btnRenderText].forEach(btn => {
     if (btn) btn.disabled = !user;
   });
-}
-
-async function authRequest(path) {
-  const username = authUsername.value.trim();
-  const password = authPassword.value;
-  if (!username || !password) {
-    toast('Enter a username and password first.', true);
-    return;
-  }
-  try {
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      toast(data.error || 'Authentication failed', true);
-      return;
-    }
-    authPassword.value = '';
-    setAuthenticated(data.user);
-    toast(`Signed in as ${data.user.username}`);
-  } catch (e) {
-    toast('Auth error: ' + e.message, true);
-  }
 }
 
 async function loadSession() {
@@ -1855,15 +1800,12 @@ btnClear.addEventListener('click', async () => {
     await loadCurrentDisplay();
   } catch (e) { toast('Error: ' + e.message, true); }
 });
-btnLogin.addEventListener('click', () => authRequest('/api/auth/login'));
-btnRegister.addEventListener('click', () => authRequest('/api/auth/register'));
-authPassword.addEventListener('keydown', e => {
-  if (e.key === 'Enter') authRequest('/api/auth/login');
-});
 btnLogout.addEventListener('click', async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
-  setAuthenticated(null);
-  toast('Signed out');
+  window.location.href = '/login';
+});
+btnAdmin.addEventListener('click', () => {
+  window.location.href = '/admin';
 });
 btnRefresh.addEventListener('click', async () => {
   pulseControl(btnRefresh);
